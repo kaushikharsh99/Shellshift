@@ -30,19 +30,31 @@ export default async function LobbyPage() {
     },
   });
 
-  const challenges = await prisma.challenge.findMany({
-    where: { isPublished: true },
-    orderBy: { order: "asc" },
-  });
-
+  const now = new Date();
   const event = await prisma.event.findFirst({
+    where: {
+      status: "PUBLISHED",
+      startTime: { lte: now },
+      endTime: { gt: now },
+      registrations: { some: { userId: session.id, status: "REGISTERED" } },
+    },
     orderBy: { createdAt: "desc" },
+    include: { challenges: { orderBy: { order: "asc" }, include: { challenge: true } } },
   });
+  if (!event) redirect("/games");
+
+  const memberIds = team?.memberships.map((member) => member.userId).sort() || [];
+  const memberIndex = memberIds.indexOf(session.id);
+  const assignedLineup = memberIds.length > 1 && memberIndex >= 0
+    ? event.challenges.filter((_, index) => index % memberIds.length === memberIndex)
+    : event.challenges;
+  const challenges = assignedLineup.filter((entry) => entry.challenge.isPublished);
 
   const durationLookup = new Map(SEED_CHALLENGES.map((sc) => [sc.slug, sc.estimatedDuration]));
 
-  const catalogItems: LobbyChallengeItem[] = challenges.map((challenge) => {
-    const run = team?.runs.find((r) => r.challengeId === challenge.id);
+  const catalogItems: LobbyChallengeItem[] = challenges.map((entry) => {
+    const challenge = entry.challenge;
+    const run = team?.runs.find((r) => r.eventId === event.id && r.challengeId === challenge.id);
 
     let clueCount = 0;
     try {
@@ -75,7 +87,7 @@ export default async function LobbyPage() {
       title: challenge.title,
       description: challenge.description,
       difficulty: challenge.difficulty as "EASY" | "MEDIUM" | "HARD",
-      order: challenge.order,
+      order: entry.order,
       timeLimitSeconds: challenge.timeLimitSeconds,
       estimatedDuration: durationLookup.get(challenge.slug) || `${Math.floor(challenge.timeLimitSeconds / 60)} min`,
       scoringConfig,
@@ -88,7 +100,7 @@ export default async function LobbyPage() {
     };
   });
 
-  const completedRuns = team?.runs.filter((r) => r.status === "COMPLETED") || [];
+  const completedRuns = team?.runs.filter((r) => r.eventId === event.id && r.status === "COMPLETED") || [];
   const completedCount = completedRuns.length;
   const totalScore = completedRuns.reduce((acc, r) => acc + (r.finalScore || 0), 0);
   const progressPercent = challenges.length > 0 ? Math.round((completedCount / challenges.length) * 100) : 0;
@@ -163,7 +175,7 @@ export default async function LobbyPage() {
         </div>
 
         {/* 20 Challenges Catalog with Filters & Sections */}
-        <LobbyCatalog challenges={catalogItems} />
+        <LobbyCatalog challenges={catalogItems} gameId={event.id} />
 
         {/* Fair play banner */}
         <div className="flex items-center justify-center gap-2 py-3 border-t border-[#27272a] text-[11px] text-[#a1a1aa]">

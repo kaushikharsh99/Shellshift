@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { StartRunButton } from "../../lobby/StartButton";
+import { getNextGameChallenge } from "@/lib/games/nextChallenge";
 
 export const dynamic = "force-dynamic";
 
@@ -68,13 +69,7 @@ export default async function ResultsPage({
     rank = betterRunsCount + 1;
   }
 
-  const nextChallenge = await prisma.challenge.findFirst({
-    where: {
-      order: { gt: run.challenge.order },
-      isPublished: true,
-    },
-    orderBy: { order: "asc" },
-  });
+  const nextChallenge = await getNextGameChallenge(run);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-cyan-500 selection:text-black">
@@ -311,9 +306,10 @@ export default async function ResultsPage({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          {nextChallenge && (
+          {nextChallenge && run.eventId && (
             <StartRunButton
               challengeId={nextChallenge.id}
+              gameId={run.eventId}
               label={`Next Mission: ${nextChallenge.title} →`}
               className="px-6 py-2.5 rounded-lg btn-primary text-xs font-bold transition-colors flex items-center gap-2"
             />

@@ -5,6 +5,7 @@ import { sanitizeChallengeForPlayer } from "../../challenges/route";
 import { evaluateObjective } from "@/lib/vfs/evaluator";
 import { ObjectiveConfig, VfsDirectory, VfsState } from "@/lib/vfs/types";
 import { calculateRunScore } from "@/lib/scoring/scoringEngine";
+import { getNextGameChallenge } from "@/lib/games/nextChallenge";
 
 export const dynamic = "force-dynamic";
 
@@ -61,57 +62,7 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden: Run belongs to another player." }, { status: 403 });
   }
 
-  let nextChallenge = null;
-  if (run.eventId && run.userId) {
-    const userMembership = await prisma.teamMembership.findFirst({
-      where: { userId: run.userId },
-      include: { team: { include: { memberships: { orderBy: { createdAt: "asc" } } } } },
-    });
-
-    const teamMembers = userMembership?.team?.memberships || [];
-    const memberCount = Math.max(1, teamMembers.length);
-    const sortedMemberIds = teamMembers.map((m) => m.userId).sort();
-    const memberIndex = sortedMemberIds.indexOf(run.userId);
-
-    const allEventChallenges = await prisma.eventChallenge.findMany({
-      where: { eventId: run.eventId },
-      orderBy: { order: "asc" },
-      include: { challenge: true },
-    });
-
-    const currentEc = allEventChallenges.find((ec) => ec.challengeId === run.challengeId);
-    const assignedChallenges = memberCount > 1 && memberIndex >= 0
-      ? allEventChallenges.filter((_, idx) => idx % memberCount === memberIndex)
-      : allEventChallenges;
-
-    const nextEc = assignedChallenges.find((ec) => ec.order > (currentEc?.order || 0));
-    if (nextEc) {
-      nextChallenge = {
-        id: nextEc.challenge.id,
-        order: nextEc.order,
-        title: nextEc.challenge.title,
-        slug: nextEc.challenge.slug,
-        difficulty: nextEc.challenge.difficulty,
-      };
-    }
-  }
-
-  if (!nextChallenge) {
-    nextChallenge = await prisma.challenge.findFirst({
-      where: {
-        order: { gt: run.challenge.order },
-        isPublished: true,
-      },
-      orderBy: { order: "asc" },
-      select: {
-        id: true,
-        order: true,
-        title: true,
-        slug: true,
-        difficulty: true,
-      },
-    });
-  }
+  const nextChallenge = await getNextGameChallenge(run);
 
   const now = new Date();
   const timeLimitSeconds = run.challenge.timeLimitSeconds || 1200;

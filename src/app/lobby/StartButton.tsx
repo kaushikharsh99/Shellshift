@@ -6,10 +6,12 @@ import { Play } from "lucide-react";
 
 export function StartRunButton({
   challengeId,
+  gameId,
   label = "Start Mission",
   className,
 }: {
   challengeId: string;
+  gameId: string;
   label?: string;
   className?: string;
 }) {
@@ -24,7 +26,7 @@ export function StartRunButton({
       const res = await fetch("/api/runs/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ challengeId }),
+        body: JSON.stringify({ challengeId, gameId }),
       });
 
       const data = await res.json();

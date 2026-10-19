@@ -39,9 +39,10 @@ export interface LobbyChallengeItem {
 
 interface LobbyCatalogProps {
   challenges: LobbyChallengeItem[];
+  gameId: string;
 }
 
-export function LobbyCatalog({ challenges }: LobbyCatalogProps) {
+export function LobbyCatalog({ challenges, gameId }: LobbyCatalogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<"ALL" | "EASY" | "MEDIUM" | "HARD">("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "UNSOLVED" | "COMPLETED">("ALL");
@@ -227,7 +228,7 @@ export function LobbyCatalog({ challenges }: LobbyCatalogProps) {
               Resume Mission
             </Link>
           ) : (
-            <StartRunButton challengeId={challenge.id} />
+            <StartRunButton challengeId={challenge.id} gameId={gameId} />
           )}
         </div>
       </div>
