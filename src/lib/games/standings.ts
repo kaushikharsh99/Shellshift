@@ -31,6 +31,20 @@ export interface TeamStanding {
   isViewer?: boolean;
 }
 
+function isBetterChallengeRun(candidate: StandingsRun, previous?: StandingsRun): boolean {
+  if (!previous) return true;
+  if (candidate.finalScore !== previous.finalScore) {
+    return candidate.finalScore > previous.finalScore;
+  }
+  const candidateDuration = candidate.durationMs ?? Number.POSITIVE_INFINITY;
+  const previousDuration = previous.durationMs ?? Number.POSITIVE_INFINITY;
+  if (candidateDuration !== previousDuration) {
+    return candidateDuration < previousDuration;
+  }
+  return (candidate.completedAt?.getTime() ?? Number.POSITIVE_INFINITY) <
+    (previous.completedAt?.getTime() ?? Number.POSITIVE_INFINITY);
+}
+
 export function rankIndividualRuns(runs: StandingsRun[]) {
   const users = new Map<
     string,
@@ -60,7 +74,7 @@ export function rankIndividualRuns(runs: StandingsRun[]) {
       users.set(run.userId, row);
     }
     const previous = row.best.get(run.challengeId);
-    if (!previous || run.finalScore > previous.finalScore) {
+    if (isBetterChallengeRun(run, previous)) {
       row.best.set(run.challengeId, run);
     }
   }
@@ -114,7 +128,7 @@ export function rankTeamStandings(
       userBestMap.set(r.userId, uMap);
     }
     const prev = uMap.get(r.challengeId);
-    if (!prev || r.finalScore > prev.finalScore) {
+    if (isBetterChallengeRun(r, prev)) {
       uMap.set(r.challengeId, r);
     }
   }
