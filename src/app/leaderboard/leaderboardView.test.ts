@@ -44,12 +44,13 @@ describe("Points-Only Event Leaderboard", () => {
     // Verify player scores and ranks
     expect(html).toContain("CyberNinja");
     expect(html).toContain("1,250.50 PTS");
-    expect(html).toContain("3 / 5");
+    expect(html).not.toContain("Solved");
+    expect(html).not.toContain("3 / 5");
     expect(html).toContain("YOU");
 
     expect(html).toContain("ByteCoder");
     expect(html).toContain("980.25 PTS");
-    expect(html).toContain("2 / 5");
+    expect(html).not.toContain("2 / 5");
   });
 
   it("strictly sorts contestants by total score descending", () => {

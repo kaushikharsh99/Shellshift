@@ -294,7 +294,6 @@ export function StandingsTable({
                 <th className="p-4 w-16">Rank</th>
                 <th>Player</th>
                 <th>Score</th>
-                <th>Completed</th>
                 <th>Time</th>
               </tr>
             </thead>

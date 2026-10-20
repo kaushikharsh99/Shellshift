@@ -385,7 +385,6 @@ export function LeaderboardView({
                   <th className="py-3 px-3 sm:px-4 w-14 sm:w-16">Rank</th>
                   <th className="py-3 px-3 sm:px-4">Player</th>
                   <th className="py-3 px-3 sm:px-4">Score</th>
-                  <th className="py-3 px-3 sm:px-4">Solved</th>
                   <th className="py-3 px-3 sm:px-4">Time</th>
                 </tr>
               </thead>
@@ -448,11 +447,6 @@ export function LeaderboardView({
                               maximumFractionDigits: 2,
                             })}{" "}
                         PTS
-                      </td>
-
-                      <td className="py-3.5 px-3 sm:px-4 text-[#fafafa] tabular-nums">
-                        {t.challengesCompleted}{" "}
-                        {totalChallenges > 0 ? `/ ${totalChallenges}` : ""}
                       </td>
 
                       <td className="py-3.5 px-3 sm:px-4 font-bold text-emerald-400 tabular-nums">
