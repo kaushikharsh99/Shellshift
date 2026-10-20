@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getGameStandings } from "@/lib/games/standings";
 import { formatDuration } from "@/lib/format";
-export { formatDuration };
 
 export const dynamic = "force-dynamic";
 

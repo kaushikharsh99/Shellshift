@@ -1,3 +1,4 @@
+import { getAssignedQuestions } from "@/lib/games/assignmentService";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -34,7 +35,11 @@ export default async function ResultsPage({
     },
   });
 
-  if (!run || !session || (session.role !== "ADMIN" && run.userId !== session.id)) {
+  if (
+    !run ||
+    !session ||
+    (session.role !== "ADMIN" && run.userId !== session.id)
+  ) {
     notFound();
   }
 
@@ -68,13 +73,15 @@ export default async function ResultsPage({
     rank = betterRunsCount + 1;
   }
 
-  const nextChallenge = await prisma.challenge.findFirst({
-    where: {
-      order: { gt: run.challenge.order },
-      isPublished: true,
-    },
-    orderBy: { order: "asc" },
-  });
+  const assigned =
+    run.eventId && run.userId
+      ? await getAssignedQuestions(run.eventId, run.userId)
+      : [];
+  const assignedIndex = assigned.findIndex(
+    (item) => item.challengeId === run.challengeId,
+  );
+  const nextChallenge =
+    assignedIndex >= 0 ? assigned[assignedIndex + 1]?.challenge : undefined;
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-cyan-500 selection:text-black">
@@ -88,8 +95,8 @@ export default async function ResultsPage({
               isCompleted
                 ? "bg-emerald-950/60 border-emerald-500/50 text-emerald-400"
                 : isAbandoned
-                ? "bg-rose-950/60 border-rose-500/50 text-rose-400"
-                : "bg-cyan-950/60 border-cyan-500/50 text-cyan-400"
+                  ? "bg-rose-950/60 border-rose-500/50 text-rose-400"
+                  : "bg-cyan-950/60 border-cyan-500/50 text-cyan-400"
             }`}
           >
             {isCompleted ? (
@@ -107,21 +114,24 @@ export default async function ResultsPage({
                 isCompleted
                   ? "text-emerald-400"
                   : isAbandoned
-                  ? "text-rose-400"
-                  : "text-cyan-400"
+                    ? "text-rose-400"
+                    : "text-cyan-400"
               }`}
             >
               {isCompleted
                 ? "Individual Server-Verified Completion"
                 : isAbandoned
-                ? "Individual Mission Expired / Incomplete"
-                : "Individual Mission In Progress"}
+                  ? "Individual Mission Expired / Incomplete"
+                  : "Individual Mission In Progress"}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {run.challenge.title}
             </h1>
             <p className="text-xs text-[#a1a1aa]">
-              Player: <span className="text-cyan-400 font-bold">{run.user?.name || "Operator"}</span>
+              Player:{" "}
+              <span className="text-cyan-400 font-bold">
+                {run.user?.name || "Operator"}
+              </span>
             </p>
           </div>
         </div>
@@ -133,7 +143,9 @@ export default async function ResultsPage({
               Final Score
             </span>
             <div className="text-2xl sm:text-3xl font-extrabold text-cyan-400 tabular-nums">
-              {run.finalScore % 1 === 0 ? run.finalScore : run.finalScore.toFixed(2)}
+              {run.finalScore % 1 === 0
+                ? run.finalScore
+                : run.finalScore.toFixed(2)}
             </div>
             <span className="text-[10px] text-[#a1a1aa]">
               {run.difficultyMultiplier}x Multiplier
@@ -193,27 +205,55 @@ export default async function ResultsPage({
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs font-mono">
             <div className="p-3 rounded-lg bg-[#18181b] border border-[#27272a] space-y-1">
-              <span className="text-[10px] text-[#a1a1aa] uppercase">Objectives</span>
-              <div className="text-lg font-bold text-emerald-400 tabular-nums">+{run.objectivePoints}</div>
+              <span className="text-[10px] text-[#a1a1aa] uppercase">
+                Objectives
+              </span>
+              <div className="text-lg font-bold text-emerald-400 tabular-nums">
+                +{run.objectivePoints}
+              </div>
               <span className="text-[9px] text-[#a1a1aa]">Base Points</span>
             </div>
 
             <div className="p-3 rounded-lg bg-[#18181b] border border-[#27272a] space-y-1">
-              <span className="text-[10px] text-[#a1a1aa] uppercase">Completion</span>
-              <div className="text-lg font-bold text-cyan-400 tabular-nums">+{run.completionBonus}</div>
-              <span className="text-[9px] text-[#a1a1aa]">Completion Bonus</span>
+              <span className="text-[10px] text-[#a1a1aa] uppercase">
+                Completion
+              </span>
+              <div className="text-lg font-bold text-cyan-400 tabular-nums">
+                +{run.completionBonus}
+              </div>
+              <span className="text-[9px] text-[#a1a1aa]">
+                Completion Bonus
+              </span>
             </div>
 
             <div className="p-3 rounded-lg bg-[#18181b] border border-[#27272a] space-y-1">
-              <span className="text-[10px] text-[#a1a1aa] uppercase">Speed Bonus</span>
-              <div className="text-lg font-bold text-cyan-400 tabular-nums">+{run.speedBonus % 1 === 0 ? run.speedBonus : run.speedBonus.toFixed(2)}</div>
+              <span className="text-[10px] text-[#a1a1aa] uppercase">
+                Speed Bonus
+              </span>
+              <div className="text-lg font-bold text-cyan-400 tabular-nums">
+                +
+                {run.speedBonus % 1 === 0
+                  ? run.speedBonus
+                  : run.speedBonus.toFixed(2)}
+              </div>
               <span className="text-[9px] text-[#a1a1aa]">Time Remaining</span>
             </div>
 
             <div className="col-span-2 sm:col-span-1 p-3 rounded-lg bg-[#18181b] border border-cyan-500/40 space-y-1">
-              <span className="text-[10px] text-cyan-400 uppercase font-bold">Total Score</span>
-              <div className="text-xl font-extrabold text-cyan-400 tabular-nums">{run.finalScore % 1 === 0 ? run.finalScore : run.finalScore.toFixed(2)}</div>
-              <span className="text-[9px] text-[#a1a1aa]">{run.baseScore % 1 === 0 ? run.baseScore : run.baseScore.toFixed(2)} × {run.difficultyMultiplier}</span>
+              <span className="text-[10px] text-cyan-400 uppercase font-bold">
+                Total Score
+              </span>
+              <div className="text-xl font-extrabold text-cyan-400 tabular-nums">
+                {run.finalScore % 1 === 0
+                  ? run.finalScore
+                  : run.finalScore.toFixed(2)}
+              </div>
+              <span className="text-[9px] text-[#a1a1aa]">
+                {run.baseScore % 1 === 0
+                  ? run.baseScore
+                  : run.baseScore.toFixed(2)}{" "}
+                × {run.difficultyMultiplier}
+              </span>
             </div>
           </div>
         </div>
@@ -227,25 +267,37 @@ export default async function ResultsPage({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[#a1a1aa]">
             <div>
-              <span className="text-[#a1a1aa] block mb-0.5">Session Started:</span>
+              <span className="text-[#a1a1aa] block mb-0.5">
+                Session Started:
+              </span>
               <span className="text-[#fafafa] font-mono">
                 {run.startedAt.toISOString()}
               </span>
             </div>
             <div>
-              <span className="text-[#a1a1aa] block mb-0.5">Session Finished:</span>
+              <span className="text-[#a1a1aa] block mb-0.5">
+                Session Finished:
+              </span>
               <span className="text-[#fafafa] font-mono">
-                {run.completedAt ? run.completedAt.toISOString() : "Session Incomplete"}
+                {run.completedAt
+                  ? run.completedAt.toISOString()
+                  : "Session Incomplete"}
               </span>
             </div>
             <div>
-              <span className="text-[#a1a1aa] block mb-0.5">Raw Execution Duration:</span>
+              <span className="text-[#a1a1aa] block mb-0.5">
+                Raw Execution Duration:
+              </span>
               <span className="text-[#fafafa] font-mono">
-                {run.durationMs ? `${(run.durationMs / 1000).toFixed(3)}s` : "N/A"}
+                {run.durationMs
+                  ? `${(run.durationMs / 1000).toFixed(3)}s`
+                  : "N/A"}
               </span>
             </div>
             <div>
-              <span className="text-[#a1a1aa] block mb-0.5">Total Commands:</span>
+              <span className="text-[#a1a1aa] block mb-0.5">
+                Total Commands:
+              </span>
               <span className="text-[#fafafa] font-mono">
                 {run.commandCount} executed
               </span>
@@ -311,10 +363,11 @@ export default async function ResultsPage({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          {nextChallenge && (
+          {isCompleted && nextChallenge && (
             <StartRunButton
               challengeId={nextChallenge.id}
-              label={`Next Mission: ${nextChallenge.title} →`}
+              gameId={run.eventId || undefined}
+              label="Next mission"
               className="px-6 py-2.5 rounded-lg btn-primary text-xs font-bold transition-colors flex items-center gap-2"
             />
           )}
@@ -338,7 +391,11 @@ export default async function ResultsPage({
           )}
 
           <Link
-            href={run.eventId ? `/leaderboard?gameId=${run.eventId}` : "/leaderboard"}
+            href={
+              run.eventId
+                ? `/leaderboard?gameId=${run.eventId}`
+                : "/leaderboard"
+            }
             className="px-5 py-2.5 rounded-lg btn-secondary text-xs font-bold transition-colors flex items-center gap-2"
           >
             <Trophy className="w-4 h-4 text-amber-400" />

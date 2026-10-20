@@ -22,8 +22,8 @@ export function GamePublishButton({ gameId }: { gameId: string }) {
 
       if (!res.ok) {
         const errorMsg =
-          data.error ||
           (data.fieldErrors && Object.values(data.fieldErrors).join(", ")) ||
+          data.error ||
           "Failed to publish competition.";
         setError(errorMsg);
         return;

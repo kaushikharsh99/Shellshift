@@ -29,16 +29,13 @@ export default async function Standings({
 
   const result = await getGameStandings(game.id, user?.id);
 
-  let userTeamId = user?.teamId;
-  if (user?.id && !userTeamId) {
-    const membership = await prisma.teamMembership.findFirst({
-      where: { userId: user.id },
-      select: { teamId: true },
-    });
-    if (membership) {
-      userTeamId = membership.teamId;
-    }
-  }
+  const membership = user
+    ? await prisma.rosterMember.findUnique({
+        where: { eventId_userId: { eventId: game.id, userId: user.id } },
+        select: { teamId: true },
+      })
+    : null;
+  const userTeamId = membership?.teamId;
 
   return (
     <div className="min-h-screen bg-[#07080b] text-white">
@@ -52,12 +49,15 @@ export default async function Standings({
             <ArrowLeft className="size-3.5" />
             <span>Return to Lobby</span>
           </Link>
-          <span className="text-xs text-zinc-500">Live verified leaderboard</span>
+          <span className="text-xs text-zinc-500">
+            Live verified leaderboard
+          </span>
         </div>
         <p className="text-sm text-cyan-400">Competition standings</p>
         <h1 className="mt-2 text-4xl font-semibold">{game.name}</h1>
         <p className="mt-3 mb-8 text-zinc-500">
-          Best verified score per challenge. Ties break by completions, then aggregate time. Team score is the average of all member scores.
+          Best verified score per challenge. Ties break by completions, then
+          aggregate time. Team score is the average of all member scores.
         </p>
         {result.error ? (
           <div className="rounded-xl border border-zinc-800 p-6 text-zinc-400">

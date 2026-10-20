@@ -33,7 +33,7 @@ describe("Points-Only Event Leaderboard", () => {
 
     // Verify it is strictly a Points Leaderboard
     expect(html).toContain("Points Leaderboard");
-    expect(html).toContain("Ranked by: Total Points → Duration");
+    expect(html).toContain("Total points → Time");
     expect(html).toContain("ShellShift Invitational");
 
     // Strictly verify "First Finish Race" is NOT present anywhere
@@ -85,7 +85,7 @@ describe("Points-Only Event Leaderboard", () => {
     expect(highIndex).toBeLessThan(lowIndex);
   });
 
-  it("renders team leaderboard with exact average score and member breakdown", () => {
+  it("renders compact team rows with average scores and no member breakdown", () => {
     const teamEntries = [
       {
         rank: 1,
@@ -138,20 +138,22 @@ describe("Points-Only Event Leaderboard", () => {
     expect(html).toContain("QuadSquad");
 
     // Verify team scores are the exact average, not sum!
-    expect(html).toContain("900 PTS");
-    expect(html).toContain("800 PTS");
+    expect(html).toMatch(/>900\s*<\/td>/);
+    expect(html).toMatch(/>800\s*<\/td>/);
     expect(html).not.toContain("3,200 PTS");
     expect(html).not.toContain("3200 PTS");
 
-    // Verify member breakdown
-    expect(html).toContain("Alice");
-    expect(html).toContain("Bob");
-    expect(html).toContain("Charlie");
-    expect(html).toContain("Dave");
-    expect(html).toContain("Neo");
+    expect(html.match(/<th(?:\s|>)/g)).toHaveLength(4);
+    expect(html).not.toContain("Team Solved");
+    // Member details belong on the team profile, not each leaderboard row.
+    expect(html).not.toContain("Alice");
+    expect(html).not.toContain("Bob");
+    expect(html).not.toContain("Charlie");
+    expect(html).not.toContain("Dave");
+    expect(html).not.toContain("Neo");
 
     // Verify viewer's team badge
-    expect(html).toContain("YOUR TEAM");
+    expect(html).toContain(">YOU<");
 
     // Verify rank order: SoloHacker (900) before QuadSquad (800)
     const soloIndex = html.indexOf("SoloHacker");

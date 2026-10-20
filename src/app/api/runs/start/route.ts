@@ -1,3 +1,5 @@
+import { getAssignedQuestions } from "@/lib/games/assignmentService";
+import { getRosterMembership } from "@/lib/games/rosterService";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -8,15 +10,21 @@ export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json(
-      { error: "Unauthorized. You must be authenticated and registered as a contestant." },
-      { status: 401 }
+      {
+        error:
+          "Unauthorized. You must be authenticated and registered as a contestant.",
+      },
+      { status: 401 },
     );
   }
 
   // Rate limit run creation
   const rl = rateLimit(`run_start:${session.id}`, 10, 60000);
   if (!rl.success) {
-    return NextResponse.json({ error: "Too many run start requests. Please wait." }, { status: 429 });
+    return NextResponse.json(
+      { error: "Too many run start requests. Please wait." },
+      { status: 429 },
+    );
   }
 
   try {
@@ -24,17 +32,39 @@ export async function POST(request: Request) {
     const { challengeId, gameId } = body;
 
     if (!challengeId || !gameId) {
-      return NextResponse.json({ error: "Missing gameId or challengeId." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing gameId or challengeId." },
+        { status: 400 },
+      );
     }
 
     // Verify event status
-    const currentEvent = await prisma.event.findUnique({ where: { id: gameId }, include: { registrations: { where: { userId: session.id, status: "REGISTERED" } }, challenges: { where: { challengeId } } } });
+    const currentEvent = await prisma.event.findUnique({
+      where: { id: gameId },
+      include: {
+        registrations: { where: { userId: session.id, status: "REGISTERED" } },
+        challenges: { where: { challengeId } },
+      },
+    });
     const now = new Date();
-    const isLive = currentEvent?.status === "PUBLISHED" && !!currentEvent.startTime && !!currentEvent.endTime && now >= currentEvent.startTime && now < currentEvent.endTime;
-    if (!currentEvent || !isLive || currentEvent.registrations.length === 0 || currentEvent.challenges.length === 0) {
+    const isLive =
+      currentEvent?.status === "PUBLISHED" &&
+      !!currentEvent.startTime &&
+      !!currentEvent.endTime &&
+      now >= currentEvent.startTime &&
+      now < currentEvent.endTime;
+    if (
+      !currentEvent ||
+      !isLive ||
+      currentEvent.registrations.length === 0 ||
+      currentEvent.challenges.length === 0
+    ) {
       return NextResponse.json(
-        { error: "This game is not live, you are not registered, or the challenge is unavailable." },
-        { status: 403 }
+        {
+          error:
+            "This game is not live, you are not registered, or the challenge is unavailable.",
+        },
+        { status: 403 },
       );
     }
 
@@ -42,43 +72,26 @@ export async function POST(request: Request) {
       where: { id: challengeId },
     });
 
-    if (!challenge || !challenge.isPublished) {
-      return NextResponse.json({ error: "Challenge not found or unavailable." }, { status: 404 });
+    if (!challenge) {
+      return NextResponse.json(
+        { error: "Challenge not found or unavailable." },
+        { status: 404 },
+      );
     }
 
-    // Query user's team membership to attach teamId to run and verify distinct assignment
-    const userMembership = await prisma.teamMembership.findFirst({
-      where: { userId: session.id },
-      include: {
-        team: {
-          include: {
-            memberships: {
-              orderBy: { createdAt: "asc" },
-            },
-          },
-        },
-      },
-    });
+    const membership = await getRosterMembership(gameId, session.id);
+    if (!membership)
+      return NextResponse.json(
+        { error: "Join a roster team for this competition first." },
+        { status: 403 },
+      );
 
-    const team = userMembership?.team;
-    const teamMembers = team?.memberships || [];
-    const memberCount = Math.max(1, teamMembers.length);
-    const sortedMemberIds = teamMembers.map((m) => m.userId).sort();
-    const memberIndex = sortedMemberIds.indexOf(session.id);
-
-    if (memberCount > 1 && memberIndex >= 0) {
-      const allChallenges = await prisma.eventChallenge.findMany({
-        where: { eventId: gameId },
-        orderBy: { order: "asc" },
-      });
-      const challengeIdx = allChallenges.findIndex((ec) => ec.challengeId === challengeId);
-      if (challengeIdx >= 0 && challengeIdx % memberCount !== memberIndex) {
-        return NextResponse.json(
-          { error: "This challenge is assigned to another member of your team." },
-          { status: 403 }
-        );
-      }
-    }
+    const assigned = await getAssignedQuestions(gameId, session.id);
+    if (!assigned.some((item) => item.challengeId === challengeId))
+      return NextResponse.json(
+        { error: "This question is not in your assigned set." },
+        { status: 403 },
+      );
 
     // Duplicate-start prevention: check for existing active run
     const existingActiveRun = await prisma.run.findFirst({
@@ -99,7 +112,10 @@ export async function POST(request: Request) {
           cwd = "/";
           await prisma.run.update({
             where: { id: existingActiveRun.id },
-            data: { currentWorkingDir: "/", filesystemState: JSON.stringify(vfsState) },
+            data: {
+              currentWorkingDir: "/",
+              filesystemState: JSON.stringify(vfsState),
+            },
           });
         } catch {}
       }
@@ -167,8 +183,8 @@ export async function POST(request: Request) {
         challenge.difficulty === "HARD"
           ? 1.5
           : challenge.difficulty === "MEDIUM"
-          ? 1.25
-          : 1.0,
+            ? 1.25
+            : 1.0,
       timeLimitSeconds,
       partialCreditOnExpiry: true,
       countsTowardLeaderboard: true,
@@ -176,7 +192,10 @@ export async function POST(request: Request) {
 
     try {
       if (challenge.scoringConfig) {
-        scoringConfig = { ...scoringConfig, ...JSON.parse(challenge.scoringConfig) };
+        scoringConfig = {
+          ...scoringConfig,
+          ...JSON.parse(challenge.scoringConfig),
+        };
       }
     } catch {}
 
@@ -184,7 +203,7 @@ export async function POST(request: Request) {
     const newRun = await prisma.run.create({
       data: {
         userId: session.id,
-        teamId: team?.id || null,
+        rosterTeamId: membership.teamId,
         eventId: gameId,
         challengeId: challenge.id,
         status: "IN_PROGRESS",
@@ -214,7 +233,7 @@ export async function POST(request: Request) {
     console.error("Run start error:", err);
     return NextResponse.json(
       { error: "Internal server error occurred while starting run." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

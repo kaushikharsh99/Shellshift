@@ -22,17 +22,19 @@ const DURATION_PRESETS = [15, 30, 45, 60, 90, 120];
 export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [openedAt, setOpenedAt] = useState(() => Date.now());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Configuration
   const [name, setName] = useState("");
+  const [rosterCsv, setRosterCsv] = useState("");
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [customInput, setCustomInput] = useState("");
 
   // Lineup selection
   const [selectedIds, setSelectedIds] = useState<string[]>(() =>
-    challenges.map((c) => c.id)
+    challenges.map((c) => c.id),
   );
   const [search, setSearch] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
@@ -81,11 +83,15 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
   };
 
   const addAll = () => {
-    const unselected = filteredChallenges.filter((c) => !selectedIds.includes(c.id));
+    const unselected = filteredChallenges.filter(
+      (c) => !selectedIds.includes(c.id),
+    );
     if (unselected.length > 0) {
       setSelectedIds([...selectedIds, ...unselected.map((c) => c.id)]);
     } else {
-      const allUnselected = challenges.filter((c) => !selectedIds.includes(c.id));
+      const allUnselected = challenges.filter(
+        (c) => !selectedIds.includes(c.id),
+      );
       setSelectedIds([...selectedIds, ...allUnselected.map((c) => c.id)]);
     }
   };
@@ -99,12 +105,12 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
     : durationMinutes;
 
   const calculatedEndTime = useMemo(() => {
-    const end = new Date(Date.now() + effectiveDuration * 60 * 1000);
+    const end = new Date(openedAt + effectiveDuration * 60 * 1000);
     return end.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
     });
-  }, [effectiveDuration]);
+  }, [effectiveDuration, openedAt]);
 
   const handleLaunch = async () => {
     setError(null);
@@ -113,6 +119,10 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
       return;
     }
 
+    if (!rosterCsv) {
+      setError("Upload the team roster CSV before launching.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/admin/games/instant", {
@@ -120,6 +130,7 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim() || undefined,
+          rosterCsv,
           durationMinutes: effectiveDuration,
           challengeIds: selectedIds,
           timezone:
@@ -153,6 +164,7 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
         type="button"
         onClick={() => {
           setError(null);
+          setOpenedAt(Date.now());
           setOpen(true);
         }}
         className="flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-950/20 px-3.5 py-2 text-sm font-medium text-cyan-300 transition hover:bg-cyan-900/30 hover:border-cyan-500/50 cursor-pointer"
@@ -210,6 +222,37 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
               {/* Left Column: Settings & Launch */}
               <div className="flex flex-col justify-between border-b border-zinc-800 lg:border-b-0 lg:border-r bg-[#0b0d12] p-6 overflow-y-auto">
                 <div className="space-y-6">
+                  <label className="grid gap-2 text-sm">
+                    Team roster CSV
+                    <input
+                      aria-label="Team roster CSV"
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="rounded-lg border border-zinc-700 p-3"
+                      onChange={async (e) => {
+                        setRosterCsv("");
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 1_000_000) {
+                          setError("CSV must be smaller than 1 MB.");
+                          return;
+                        }
+                        try {
+                          setRosterCsv(await file.text());
+                          setError(null);
+                        } catch {
+                          setError("Unable to read CSV.");
+                        }
+                      }}
+                    />
+                    <a
+                      href="/templates/team-roster.csv"
+                      download
+                      className="text-cyan-300 underline"
+                    >
+                      Download example template
+                    </a>
+                  </label>
                   {/* Name Input */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
@@ -300,7 +343,8 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
                     <div className="flex justify-between border-t border-zinc-800/80 pt-2">
                       <span className="text-zinc-500">Selected Lineup:</span>
                       <span className="font-semibold text-cyan-300 font-mono">
-                        {selectedIds.length} challenge{selectedIds.length !== 1 ? "s" : ""}
+                        {selectedIds.length} challenge
+                        {selectedIds.length !== 1 ? "s" : ""}
                       </span>
                     </div>
                   </div>
@@ -399,7 +443,7 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
                         const isSelected = selectedIds.includes(c.id);
                         const orderIndex = selectedIds.indexOf(c.id);
                         const timeMin = Math.round(
-                          (c.timeLimitSeconds || 1200) / 60
+                          (c.timeLimitSeconds || 1200) / 60,
                         );
 
                         return (
@@ -437,8 +481,8 @@ export function StartLiveGameModal({ challenges }: StartLiveGameModalProps) {
                                     c.difficulty === "HARD"
                                       ? "bg-rose-950/60 text-rose-300 border border-rose-800/60"
                                       : c.difficulty === "MEDIUM"
-                                      ? "bg-amber-950/60 text-amber-300 border border-amber-800/60"
-                                      : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/60"
+                                        ? "bg-amber-950/60 text-amber-300 border border-amber-800/60"
+                                        : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/60"
                                   }`}
                                 >
                                   {c.difficulty}

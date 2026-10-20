@@ -1,3 +1,4 @@
+import { RosterUpload } from "@/components/admin/RosterUpload";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -28,6 +29,7 @@ export default async function GamePage({
   const game = await prisma.event.findUnique({
     where: { id: gameId },
     include: {
+      rosterTeams: { select: { _count: { select: { members: true } } } },
       challenges: {
         orderBy: { order: "asc" },
         include: { challenge: true },
@@ -50,6 +52,15 @@ export default async function GamePage({
 
   return (
     <div className="mx-auto max-w-5xl">
+      <RosterUpload
+        gameId={game.id}
+        teamCount={game.rosterTeams.length}
+        memberCount={game.rosterTeams.reduce(
+          (sum, t) => sum + t._count.members,
+          0,
+        )}
+        editable={game.status === "DRAFT"}
+      />
       {/* Header & Quick Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -111,12 +122,16 @@ export default async function GamePage({
             <span className="text-xs uppercase tracking-wider">Registered</span>
             <Users className="size-4 text-cyan-400" />
           </div>
-          <strong className="mt-2 block text-3xl">{game._count.registrations}</strong>
+          <strong className="mt-2 block text-3xl">
+            {game._count.registrations}
+          </strong>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-[#0e1016] p-5">
           <div className="flex items-center justify-between text-zinc-500">
-            <span className="text-xs uppercase tracking-wider">Active Runs</span>
+            <span className="text-xs uppercase tracking-wider">
+              Active Runs
+            </span>
             <Activity className="size-4 text-amber-400" />
           </div>
           <strong className="mt-2 block text-3xl">{activeRuns}</strong>
@@ -135,7 +150,9 @@ export default async function GamePage({
             <span className="text-xs uppercase tracking-wider">Lineup</span>
             <Layers3 className="size-4 text-purple-400" />
           </div>
-          <strong className="mt-2 block text-3xl">{game.challenges.length}</strong>
+          <strong className="mt-2 block text-3xl">
+            {game.challenges.length}
+          </strong>
         </div>
       </div>
 
@@ -160,13 +177,19 @@ export default async function GamePage({
             <div className="grid gap-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-zinc-500">Opens:</span>
-                <span className="font-mono text-zinc-300" suppressHydrationWarning>
+                <span
+                  className="font-mono text-zinc-300"
+                  suppressHydrationWarning
+                >
                   {formatScheduleTime(game.registrationOpensAt, game.timezone)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">Closes:</span>
-                <span className="font-mono text-zinc-300" suppressHydrationWarning>
+                <span
+                  className="font-mono text-zinc-300"
+                  suppressHydrationWarning
+                >
                   {formatScheduleTime(game.registrationClosesAt, game.timezone)}
                 </span>
               </div>
@@ -180,13 +203,19 @@ export default async function GamePage({
             <div className="grid gap-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-zinc-500">Starts:</span>
-                <span className="font-mono text-zinc-300" suppressHydrationWarning>
+                <span
+                  className="font-mono text-zinc-300"
+                  suppressHydrationWarning
+                >
                   {formatScheduleTime(game.startTime, game.timezone)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">Ends:</span>
-                <span className="font-mono text-zinc-300" suppressHydrationWarning>
+                <span
+                  className="font-mono text-zinc-300"
+                  suppressHydrationWarning
+                >
                   {formatScheduleTime(game.endTime, game.timezone)}
                 </span>
               </div>

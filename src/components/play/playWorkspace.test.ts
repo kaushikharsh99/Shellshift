@@ -1,3 +1,6 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CompletionSummary } from "./CompletionSummary";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -17,12 +20,16 @@ describe("terminal-first play workspace", () => {
     expect(contextPanel).toContain("Clues");
   });
 
-  it("provides CompletionSummary with verified score breakdown, timing, and next actions", () => {
-    const summary = readFileSync("src/components/play/CompletionSummary.tsx", "utf8");
-    expect(summary).toContain("CompletionSummary");
-    expect(summary).toContain("Verified Time");
-    expect(summary).toContain("Final Score");
-    expect(summary).toContain("Commands Executed");
+  it("renders verified completion details and a generic next-mission button", () => {
+    const html = renderToStaticMarkup(React.createElement(CompletionSummary, {
+      runData: { id: "run", gameId: "game", finalScore: 1200.84, commandCount: 4, durationMs: 118470, nextChallenge: { id: "next", title: "Hidden next question name" } },
+    }));
+    const text = html.replace(/<[^>]+>/g," ").replace(/\s+/g," ");
+    expect(text).toContain("Verified Time");
+    expect(text).toContain("Final Score");
+    expect(text).toContain("Commands Executed");
+    expect(text).toContain("Next mission");
+    expect(text).not.toContain("Hidden next question name");
   });
 
   it("ensures Terminal uses semantic presentation without raw emoji icons", () => {

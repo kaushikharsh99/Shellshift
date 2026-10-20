@@ -1,15 +1,24 @@
+import { getAssignedQuestions } from "@/lib/games/assignmentService";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { sanitizeChallengeForPlayer } from "../../challenges/route";
+import { sanitizeChallengeForPlayer } from "@/lib/challenges/playerView";
 import { evaluateObjective } from "@/lib/vfs/evaluator";
 import { ObjectiveConfig, VfsDirectory, VfsState } from "@/lib/vfs/types";
 import { calculateRunScore } from "@/lib/scoring/scoringEngine";
 
 export const dynamic = "force-dynamic";
 
-function extractTreeList(dir: VfsDirectory, basePath: string = ""): Array<{ path: string; name: string; type: "file" | "dir"; size?: number }> {
-  const items: Array<{ path: string; name: string; type: "file" | "dir"; size?: number }> = [];
+function extractTreeList(
+  dir: VfsDirectory,
+  basePath: string = "",
+): Array<{ path: string; name: string; type: "file" | "dir"; size?: number }> {
+  const items: Array<{
+    path: string;
+    name: string;
+    type: "file" | "dir";
+    size?: number;
+  }> = [];
 
   for (const [name, child] of Object.entries(dir.children)) {
     const fullPath = `${basePath}/${name}`;
@@ -17,7 +26,12 @@ function extractTreeList(dir: VfsDirectory, basePath: string = ""): Array<{ path
       items.push({ path: fullPath, name, type: "dir" });
       items.push(...extractTreeList(child, fullPath));
     } else {
-      items.push({ path: fullPath, name, type: "file", size: child.content.length });
+      items.push({
+        path: fullPath,
+        name,
+        type: "file",
+        size: child.content.length,
+      });
     }
   }
 
@@ -26,7 +40,7 @@ function extractTreeList(dir: VfsDirectory, basePath: string = ""): Array<{ path
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ runId: string }> }
+  { params }: { params: Promise<{ runId: string }> },
 ) {
   const { runId } = await params;
   const session = await getSession();
@@ -43,7 +57,13 @@ export async function GET(
       challenge: {
         include: {
           hints: {
-            select: { id: true, title: true, penaltySeconds: true, pointPenalty: true, order: true },
+            select: {
+              id: true,
+              title: true,
+              penaltySeconds: true,
+              pointPenalty: true,
+              order: true,
+            },
           },
         },
       },
@@ -58,33 +78,25 @@ export async function GET(
   }
 
   if (run.userId !== session.id && session.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden: Run belongs to another player." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden: Run belongs to another player." },
+      { status: 403 },
+    );
   }
 
   let nextChallenge = null;
   if (run.eventId && run.userId) {
-    const userMembership = await prisma.teamMembership.findFirst({
-      where: { userId: run.userId },
-      include: { team: { include: { memberships: { orderBy: { createdAt: "asc" } } } } },
-    });
+    const allEventChallenges = await getAssignedQuestions(
+      run.eventId,
+      run.userId,
+    );
 
-    const teamMembers = userMembership?.team?.memberships || [];
-    const memberCount = Math.max(1, teamMembers.length);
-    const sortedMemberIds = teamMembers.map((m) => m.userId).sort();
-    const memberIndex = sortedMemberIds.indexOf(run.userId);
-
-    const allEventChallenges = await prisma.eventChallenge.findMany({
-      where: { eventId: run.eventId },
-      orderBy: { order: "asc" },
-      include: { challenge: true },
-    });
-
-    const currentEc = allEventChallenges.find((ec) => ec.challengeId === run.challengeId);
-    const assignedChallenges = memberCount > 1 && memberIndex >= 0
-      ? allEventChallenges.filter((_, idx) => idx % memberCount === memberIndex)
-      : allEventChallenges;
-
-    const nextEc = assignedChallenges.find((ec) => ec.order > (currentEc?.order || 0));
+    const currentEc = allEventChallenges.find(
+      (ec) => ec.challengeId === run.challengeId,
+    );
+    const nextEc = allEventChallenges.find(
+      (ec) => ec.order > (currentEc?.order || 0),
+    );
     if (nextEc) {
       nextChallenge = {
         id: nextEc.challenge.id,
@@ -96,7 +108,7 @@ export async function GET(
     }
   }
 
-  if (!nextChallenge) {
+  if (!nextChallenge && !run.eventId) {
     nextChallenge = await prisma.challenge.findFirst({
       where: {
         order: { gt: run.challenge.order },
@@ -126,9 +138,15 @@ export async function GET(
     run.event &&
     (run.event.status === "ENDED" ||
       run.event.status === "ARCHIVED" ||
-      (run.event.endTime && now.getTime() >= new Date(run.event.endTime).getTime()));
+      (run.event.endTime &&
+        now.getTime() >= new Date(run.event.endTime).getTime()));
 
-  if (run.event && run.event.status === "PUBLISHED" && run.event.endTime && now.getTime() >= new Date(run.event.endTime).getTime()) {
+  if (
+    run.event &&
+    run.event.status === "PUBLISHED" &&
+    run.event.endTime &&
+    now.getTime() >= new Date(run.event.endTime).getTime()
+  ) {
     run.event.status = "ENDED";
     await prisma.event.updateMany({
       where: { id: run.event.id, status: { not: "ENDED" } },
@@ -137,7 +155,10 @@ export async function GET(
   }
 
   // Authoritative Expiration check on retrieval (challenge deadline OR event ended)
-  if (currentStatus === "IN_PROGRESS" && (now.getTime() > deadline.getTime() || isEventEnded)) {
+  if (
+    currentStatus === "IN_PROGRESS" &&
+    (now.getTime() > deadline.getTime() || isEventEnded)
+  ) {
     currentStatus = "EXPIRED";
     await prisma.run.updateMany({
       where: { id: run.id, status: "IN_PROGRESS" },
@@ -146,7 +167,12 @@ export async function GET(
   }
 
   let vfsState: VfsState | null = null;
-  let treeList: Array<{ path: string; name: string; type: "file" | "dir"; size?: number }> = [];
+  let treeList: Array<{
+    path: string;
+    name: string;
+    type: "file" | "dir";
+    size?: number;
+  }> = [];
 
   try {
     vfsState = JSON.parse(run.filesystemState);
@@ -172,7 +198,10 @@ export async function GET(
   } catch {}
 
   // Recalculate score if run is COMPLETED but score was missing or zero
-  if (currentStatus === "COMPLETED" && (!run.finalScore || run.finalScore === 0)) {
+  if (
+    currentStatus === "COMPLETED" &&
+    (!run.finalScore || run.finalScore === 0)
+  ) {
     let scoringConfig = {
       maxBaseScore: 1000,
       intermediateBudget: 500,
@@ -184,17 +213,23 @@ export async function GET(
         run.challenge.difficulty === "HARD"
           ? 1.5
           : run.challenge.difficulty === "MEDIUM"
-          ? 1.25
-          : 1.0,
+            ? 1.25
+            : 1.0,
       timeLimitSeconds,
       partialCreditOnExpiry: true,
       countsTowardLeaderboard: true,
     };
     try {
       if (run.scoringSnapshot) {
-        scoringConfig = { ...scoringConfig, ...JSON.parse(run.scoringSnapshot) };
+        scoringConfig = {
+          ...scoringConfig,
+          ...JSON.parse(run.scoringSnapshot),
+        };
       } else if (run.challenge.scoringConfig) {
-        scoringConfig = { ...scoringConfig, ...JSON.parse(run.challenge.scoringConfig) };
+        scoringConfig = {
+          ...scoringConfig,
+          ...JSON.parse(run.challenge.scoringConfig),
+        };
       }
     } catch {}
 
@@ -208,12 +243,16 @@ export async function GET(
       ? evaluation.details.filter((d) => d.passed).map((d) => d.id || "")
       : availableObjectives.map((o) => o.id);
 
-    const hintPenalties = run.hintUsages.map((hu) => hu.pointPenalty || hu.hint.pointPenalty || 25);
+    const hintPenalties = run.hintUsages.map(
+      (hu) => hu.pointPenalty || hu.hint.pointPenalty || 25,
+    );
 
     const computedBreakdown = calculateRunScore({
       status: "COMPLETED",
       startedAt: run.startedAt,
-      completedAt: run.completedAt || new Date(run.startedAt.getTime() + (run.durationMs || 1000)),
+      completedAt:
+        run.completedAt ||
+        new Date(run.startedAt.getTime() + (run.durationMs || 1000)),
       verifiedObjectiveIds: verifiedIds,
       revealedHintPenalties: hintPenalties,
       config: scoringConfig,
@@ -268,11 +307,18 @@ export async function GET(
       }
     }
 
-    if (currentStatus === "COMPLETED" && run.finalScore > (bestByChallenge.get(run.challengeId) || 0)) {
+    if (
+      currentStatus === "COMPLETED" &&
+      run.finalScore > (bestByChallenge.get(run.challengeId) || 0)
+    ) {
       bestByChallenge.set(run.challengeId, run.finalScore);
     }
 
-    totalEventScore = Math.round(Array.from(bestByChallenge.values()).reduce((sum, s) => sum + s, 0) * 100) / 100;
+    totalEventScore =
+      Math.round(
+        Array.from(bestByChallenge.values()).reduce((sum, s) => sum + s, 0) *
+          100,
+      ) / 100;
   }
 
   return NextResponse.json(
@@ -317,6 +363,6 @@ export async function GET(
       headers: {
         "Cache-Control": "no-store, no-cache, must-revalidate",
       },
-    }
+    },
   );
 }

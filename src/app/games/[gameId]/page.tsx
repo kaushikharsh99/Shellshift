@@ -1,3 +1,4 @@
+import { getRosterMembership } from "@/lib/games/rosterService";
 import { notFound } from "next/navigation";
 import { Calendar, Clock, Layers3, ShieldCheck } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
@@ -28,9 +29,7 @@ export default async function Game({
       registrations: user
         ? { where: { userId: user.id, status: "REGISTERED" } }
         : false,
-      runs: user
-        ? { where: { userId: user.id } }
-        : false,
+      runs: user ? { where: { userId: user.id } } : false,
     },
   });
 
@@ -44,6 +43,7 @@ export default async function Game({
     notFound();
   }
 
+  const membership = user ? await getRosterMembership(g.id, user.id) : null;
   const now = new Date();
   if (g.status === "PUBLISHED" && g.endTime && now >= g.endTime) {
     await prisma.event.update({
@@ -61,20 +61,25 @@ export default async function Game({
       startsAt: g.startTime,
       endsAt: g.endTime,
     },
-    now
+    now,
   );
 
-  const isEnded = phase === "ENDED" || g.status === "ENDED" || (!!g.endTime && now >= g.endTime);
+  const isEnded =
+    phase === "ENDED" ||
+    g.status === "ENDED" ||
+    (!!g.endTime && now >= g.endTime);
 
   const durationHours = Math.round(
-    (g.endTime.getTime() - g.startTime.getTime()) / 36e5
+    (g.endTime.getTime() - g.startTime.getTime()) / 36e5,
   );
 
   return (
     <div className="min-h-screen bg-[#07080b] text-white">
       <Navbar user={user} />
       <main className="mx-auto max-w-6xl px-5 py-12">
-        <StatusBadge tone={phase === "LIVE" ? "success" : isEnded ? "danger" : "info"}>
+        <StatusBadge
+          tone={phase === "LIVE" ? "success" : isEnded ? "danger" : "info"}
+        >
           {isEnded ? "ENDED" : phase.replaceAll("_", " ")}
         </StatusBadge>
 
@@ -90,9 +95,12 @@ export default async function Game({
             {isEnded && (
               <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 text-sm">
                 <div>
-                  <p className="font-semibold text-rose-300">This competition has concluded.</p>
+                  <p className="font-semibold text-rose-300">
+                    This competition has concluded.
+                  </p>
                   <p className="text-xs text-zinc-400 mt-0.5">
-                    Submissions are closed. Check the event leaderboard to view final rankings and scores.
+                    Submissions are closed. Check the event leaderboard to view
+                    final rankings and scores.
                   </p>
                 </div>
               </div>
@@ -102,17 +110,16 @@ export default async function Game({
               <div className="rounded-xl border border-zinc-800 bg-[#0e1016] p-4">
                 <Calendar className="size-4 text-cyan-400" />
                 <span className="mt-4 block text-xs text-zinc-500">Starts</span>
-                <strong
-                  className="mt-1 block text-sm"
-                  suppressHydrationWarning
-                >
+                <strong className="mt-1 block text-sm" suppressHydrationWarning>
                   {formatScheduleTime(g.startTime, g.timezone)}
                 </strong>
               </div>
 
               <div className="rounded-xl border border-zinc-800 bg-[#0e1016] p-4">
                 <Clock className="size-4 text-cyan-400" />
-                <span className="mt-4 block text-xs text-zinc-500">Duration</span>
+                <span className="mt-4 block text-xs text-zinc-500">
+                  Duration
+                </span>
                 <strong className="mt-1 block text-sm">
                   {durationHours} {durationHours === 1 ? "hour" : "hours"}
                 </strong>
@@ -120,7 +127,9 @@ export default async function Game({
 
               <div className="rounded-xl border border-zinc-800 bg-[#0e1016] p-4">
                 <Layers3 className="size-4 text-cyan-400" />
-                <span className="mt-4 block text-xs text-zinc-500">Challenges</span>
+                <span className="mt-4 block text-xs text-zinc-500">
+                  Challenges
+                </span>
                 <strong className="mt-1 block text-sm">
                   {g.challenges.length}
                 </strong>
@@ -148,7 +157,10 @@ export default async function Game({
                 <span className="block text-[11px] uppercase tracking-wider text-rose-400 font-semibold">
                   Competition Status
                 </span>
-                <strong className="mt-1 block text-xl font-bold text-rose-400" suppressHydrationWarning>
+                <strong
+                  className="mt-1 block text-xl font-bold text-rose-400"
+                  suppressHydrationWarning
+                >
                   Event Ended
                 </strong>
                 <p className="mt-1.5 text-xs text-zinc-400">
@@ -157,18 +169,26 @@ export default async function Game({
               </div>
             ) : (
               <GameCountdown
-                target={(phase === "LIVE" ? g.endTime : g.startTime).toISOString()}
-                label={phase === "LIVE" ? "Time remaining" : "Competition begins in"}
+                target={(phase === "LIVE"
+                  ? g.endTime
+                  : g.startTime
+                ).toISOString()}
+                label={
+                  phase === "LIVE" ? "Time remaining" : "Competition begins in"
+                }
                 isEnded={isEnded}
               />
             )}
             <div className="my-6 h-px bg-zinc-800" />
             <GameAction
+              teamJoined={!!membership}
               gameId={g.id}
               phase={isEnded ? "ENDED" : phase}
               signedIn={!!user}
               registered={!!(g.registrations && g.registrations.length)}
-              hasResults={!!(g.runs && g.runs.some((r) => r.status === "COMPLETED"))}
+              hasResults={
+                !!(g.runs && g.runs.some((r) => r.status === "COMPLETED"))
+              }
               hasStarted={!!(g.runs && g.runs.length > 0)}
             />
             <p className="mt-4 text-xs leading-5 text-zinc-500">

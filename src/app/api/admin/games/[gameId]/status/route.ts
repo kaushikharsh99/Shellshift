@@ -15,5 +15,5 @@ export async function PATCH(
     return Response.json(result, { status: result.status });
   }
   const result = await transitionGameStatus(gameId, status, session.id);
-  return Response.json(result, { status: result.game ? 200 : 400 });
+  return Response.json(result, { status: "game" in result ? 200 : 400 });
 }

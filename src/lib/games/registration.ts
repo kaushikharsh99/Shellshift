@@ -1,3 +1,4 @@
+import { getRosterMembership } from "./rosterService";
 import { prisma } from "@/lib/prisma";
 
 export interface RegistrationWindow {
@@ -12,7 +13,12 @@ export function canRegisterForGame(game: RegistrationWindow, now = new Date()) {
   if (game.status !== "PUBLISHED") return false;
 
   // Allow registration during an active live competition
-  if (game.startTime && game.endTime && now >= game.startTime && now < game.endTime) {
+  if (
+    game.startTime &&
+    game.endTime &&
+    now >= game.startTime &&
+    now < game.endTime
+  ) {
     return true;
   }
 
@@ -25,10 +31,20 @@ export function canRegisterForGame(game: RegistrationWindow, now = new Date()) {
   );
 }
 
-export async function registerUserForGame(eventId: string, userId: string, now = new Date()) {
+export async function registerUserForGame(
+  eventId: string,
+  userId: string,
+  now = new Date(),
+) {
   const game = await prisma.event.findUnique({ where: { id: eventId } });
   if (!game) return { error: "Game not found.", status: 404 };
-  if (!canRegisterForGame(game, now)) return { error: "Registration is not open.", status: 403 };
+  if (!canRegisterForGame(game, now))
+    return { error: "Registration is not open.", status: 403 };
+  if (!(await getRosterMembership(eventId, userId)))
+    return {
+      error: "Select your team and match your roster email before registering.",
+      status: 403,
+    };
   const registration = await prisma.gameRegistration.upsert({
     where: { eventId_userId: { eventId, userId } },
     update: { status: "REGISTERED" },

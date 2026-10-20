@@ -16,6 +16,7 @@ model User {
   role        String           @default("USER") // USER, ADMIN
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  rosterEntries RosterMember[]
   memberships TeamMembership[]
   commandLogs CommandLog[]
   auditLogs   AuditLog[]
@@ -76,6 +77,8 @@ model Event {
 
   winnerTeam Team? @relation("EventWinner", fields: [winnerTeamId], references: [id], onDelete: SetNull)
   createdBy  User? @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  rosterTeams CompetitionTeam[]
+  rosterMembers RosterMember[]
   challenges EventChallenge[]
   registrations GameRegistration[]
   runs Run[]
@@ -139,6 +142,8 @@ model Challenge {
 
 model Run {
   id                   String                @id @default(uuid())
+  rosterTeamId         String?
+  rosterTeam           CompetitionTeam? @relation(fields: [rosterTeamId], references: [id], onDelete: SetNull)
   teamId               String?
   legacyTeamId         String?
   legacyIndividualEligible Boolean           @default(false)
@@ -249,5 +254,34 @@ model AuditLog {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
+}
+
+// Authoritative teams are scoped to a competition; legacy Team remains historical.
+model CompetitionTeam {
+  id String @id @default(uuid())
+  eventId String
+  name String
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  members RosterMember[]
+  runs Run[]
+  @@unique([eventId, name])
+  @@index([eventId])
+}
+
+model RosterMember {
+  id String @id @default(uuid())
+  eventId String
+  teamId String
+  email String
+  position Int
+  userId String?
+  claimedAt DateTime?
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  team CompetitionTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@unique([eventId, email])
+  @@unique([eventId, userId])
+  @@unique([teamId, position])
   @@index([userId])
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sanitizeChallengeForPlayer } from "../route";
+import { sanitizeChallengeForPlayer } from "@/lib/challenges/playerView";
 
 export async function GET() {
   const currentEvent = await prisma.event.findFirst({

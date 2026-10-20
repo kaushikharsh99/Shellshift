@@ -12,6 +12,7 @@ export function GameAction({
   registered,
   hasResults,
   hasStarted = false,
+  teamJoined = true,
 }: {
   gameId: string;
   phase: string;
@@ -19,6 +20,7 @@ export function GameAction({
   registered: boolean;
   hasResults: boolean;
   hasStarted?: boolean;
+  teamJoined?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -45,8 +47,18 @@ export function GameAction({
     );
   }
 
+  if (!teamJoined)
+    return (
+      <Link className="btn-primary" href={`/register?eventId=${gameId}`}>
+        Select your team
+        <ArrowRight className="size-4" />
+      </Link>
+    );
+
   if (phase === "PUBLISHED") {
-    return <span className="btn-secondary opacity-70">Registration opens soon</span>;
+    return (
+      <span className="btn-secondary opacity-70">Registration opens soon</span>
+    );
   }
 
   if (phase === "REGISTRATION_OPEN" && !registered) {
@@ -69,11 +81,7 @@ export function GameAction({
 
     return (
       <div>
-        <button
-          className="btn-primary"
-          onClick={register}
-          disabled={loading}
-        >
+        <button className="btn-primary" onClick={register} disabled={loading}>
           {loading ? <Loader2 className="size-4 animate-spin" /> : null}
           Register now
         </button>
@@ -130,11 +138,7 @@ export function GameAction({
 
     return (
       <div>
-        <button
-          className="btn-primary"
-          onClick={register}
-          disabled={loading}
-        >
+        <button className="btn-primary" onClick={register} disabled={loading}>
           {loading ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (

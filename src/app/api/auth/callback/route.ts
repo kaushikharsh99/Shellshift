@@ -1,15 +1,13 @@
+import { resolveRosterLoginDestination } from "@/lib/auth/postLogin";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
 import {
   checkIsAdmin,
   discoverEndpoints,
   exchangeAuthorizationCode,
-  extractOidcTeam,
   fetchUserInfo,
   getOidcConfig,
-  resolvePostLoginDestination,
   resolveShellShiftRole,
   verifyIdToken,
 } from "@/lib/auth/oidc";
@@ -17,12 +15,17 @@ import { SessionUser, setSessionCookie } from "@/lib/auth/session";
 
 function sanitizeRedirectTarget(target?: string | null): string {
   if (!target || typeof target !== "string") {
-    return "/lobby";
+    return "/games";
   }
-  if (target.startsWith("/") && !target.startsWith("//") && !target.includes("://")) {
+  if (
+    target.startsWith("/") &&
+    !target.startsWith("//") &&
+    !target.includes("://") &&
+    !/[\\\u0000-\u0020]/.test(target)
+  ) {
     return target;
   }
-  return "/lobby";
+  return "/games";
 }
 
 export async function GET(request: Request) {
@@ -47,14 +50,22 @@ export async function GET(request: Request) {
 
   // Handle provider-reported errors gracefully
   if (error) {
-    console.warn(`OIDC provider returned error: ${error} (${errorDescription || "no description"})`);
+    console.warn(
+      `OIDC provider returned error: ${error} (${errorDescription || "no description"})`,
+    );
     if (error === "access_denied") {
       return NextResponse.redirect(
-        new URL("/?error=Access+was+denied+by+the+identity+provider", request.url)
+        new URL(
+          "/?error=Access+was+denied+by+the+identity+provider",
+          request.url,
+        ),
       );
     }
     return NextResponse.redirect(
-      new URL("/?error=Authentication+was+cancelled+or+failed+at+provider", request.url)
+      new URL(
+        "/?error=Authentication+was+cancelled+or+failed+at+provider",
+        request.url,
+      ),
     );
   }
 
@@ -62,14 +73,17 @@ export async function GET(request: Request) {
   if (!state || !storedState || state !== storedState) {
     console.error("OIDC state mismatch or state expired");
     return NextResponse.redirect(
-      new URL("/?error=Authentication+state+validation+failed.+Please+try+again.", request.url)
+      new URL(
+        "/?error=Authentication+state+validation+failed.+Please+try+again.",
+        request.url,
+      ),
     );
   }
 
   if (!code || !storedVerifier || !storedNonce) {
     console.error("Missing authorization code, verifier, or nonce");
     return NextResponse.redirect(
-      new URL("/?error=Missing+authentication+parameters", request.url)
+      new URL("/?error=Missing+authentication+parameters", request.url),
     );
   }
 
@@ -84,13 +98,16 @@ export async function GET(request: Request) {
       config,
       code,
       storedVerifier,
-      metadata
+      metadata,
     );
 
     if (!tokenData.id_token) {
       console.error("Token response missing id_token");
       return NextResponse.redirect(
-        new URL("/?error=Provider+failed+to+return+identity+token", request.url)
+        new URL(
+          "/?error=Provider+failed+to+return+identity+token",
+          request.url,
+        ),
       );
     }
 
@@ -99,19 +116,22 @@ export async function GET(request: Request) {
       tokenData.id_token,
       config,
       storedNonce,
-      metadata
+      metadata,
     );
 
     // 4. Optionally fetch userinfo if userinfo_endpoint exists and access_token was returned
     let userInfo: Record<string, unknown> = {};
     if (tokenData.access_token && metadata.userinfo_endpoint) {
       try {
-        userInfo = await fetchUserInfo(tokenData.access_token, metadata.userinfo_endpoint);
+        userInfo = await fetchUserInfo(
+          tokenData.access_token,
+          metadata.userinfo_endpoint,
+        );
         // Verify subject binding if userinfo returns sub
         if (userInfo.sub && userInfo.sub !== validatedClaims.sub) {
           console.error("UserInfo subject does not match ID token subject");
           return NextResponse.redirect(
-            new URL("/?error=Identity+binding+mismatch", request.url)
+            new URL("/?error=Identity+binding+mismatch", request.url),
           );
         }
       } catch (uiErr) {
@@ -130,8 +150,10 @@ export async function GET(request: Request) {
     const rawName =
       (typeof validatedClaims.name === "string" && validatedClaims.name) ||
       (typeof userInfo.name === "string" && userInfo.name) ||
-      (typeof validatedClaims.preferred_username === "string" && validatedClaims.preferred_username) ||
-      (typeof userInfo.preferred_username === "string" && userInfo.preferred_username) ||
+      (typeof validatedClaims.preferred_username === "string" &&
+        validatedClaims.preferred_username) ||
+      (typeof userInfo.preferred_username === "string" &&
+        userInfo.preferred_username) ||
       (email ? email.split("@")[0] : "Competitor");
 
     const name = rawName.trim() || "Competitor";
@@ -172,7 +194,11 @@ export async function GET(request: Request) {
     } else {
       // User exists - preserve memberships, progress, and history while synchronizing
       // access with the latest verified website role or local administrator allowlist.
-      const updateData: { email?: string | null; name?: string; role?: string } = {};
+      const updateData: {
+        email?: string | null;
+        name?: string;
+        role?: string;
+      } = {};
 
       if (email && email !== user.email) {
         updateData.email = email;
@@ -196,62 +222,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // 7.5. Automatically detect and pair team from OIDC claims or UserInfo
-    const detectedTeam = extractOidcTeam(validatedClaims, userInfo);
-    if (detectedTeam) {
-      try {
-        let team = await prisma.team.findUnique({
-          where: { name: detectedTeam.name },
-        });
-
-        if (!team) {
-          const inviteCode = crypto.randomBytes(4).toString("hex").toUpperCase();
-          team = await prisma.team.create({
-            data: {
-              name: detectedTeam.name,
-              inviteCode,
-            },
-          });
-        }
-
-        const existingMembership = await prisma.teamMembership.findUnique({
-          where: {
-            userId_teamId: {
-              userId: user.id,
-              teamId: team.id,
-            },
-          },
-        });
-
-        if (!existingMembership) {
-          await prisma.teamMembership.create({
-            data: {
-              userId: user.id,
-              teamId: team.id,
-              role: detectedTeam.role || "MEMBER",
-            },
-          });
-        }
-
-        // Refresh user memberships
-        const refreshedUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          include: {
-            memberships: {
-              include: { team: true },
-            },
-          },
-        });
-        if (refreshedUser) {
-          user = refreshedUser;
-        }
-      } catch (teamSyncErr) {
-        console.warn("OIDC team sync warning:", teamSyncErr);
-      }
-    }
-
-    const activeMembership = user.memberships[0];
-
     const sessionUser: SessionUser = {
       id: user.id,
       oidcSub: user.oidcSub,
@@ -259,16 +229,16 @@ export async function GET(request: Request) {
       email: user.email,
       name: user.name,
       role: (user.role as "USER" | "ADMIN") || (isAdmin ? "ADMIN" : "USER"),
-      teamId: activeMembership?.teamId || null,
-      teamName: activeMembership?.team?.name || null,
-      teamRole: (activeMembership?.role as "LEADER" | "MEMBER") || null,
+      teamId: null,
+      teamName: null,
+      teamRole: null,
     };
 
     // 8. Redirect to contestant registration if no team yet, else destination
-    const destination = resolvePostLoginDestination(
+    const destination = await resolveRosterLoginDestination(
       sessionUser.role,
-      sessionUser.teamId,
-      redirectTarget
+      sessionUser.id,
+      redirectTarget,
     );
     const response = NextResponse.redirect(new URL(destination, request.url));
     await setSessionCookie(sessionUser, response);
@@ -277,7 +247,7 @@ export async function GET(request: Request) {
     console.error("OIDC callback exception:", err);
     const msg = (err as Error)?.message || "Authentication processing failure";
     return NextResponse.redirect(
-      new URL(`/?error=${encodeURIComponent(msg)}`, request.url)
+      new URL(`/?error=${encodeURIComponent(msg)}`, request.url),
     );
   }
 }

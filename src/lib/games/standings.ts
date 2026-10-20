@@ -71,7 +71,7 @@ export function rankIndividualRuns(runs: StandingsRun[]) {
       row.aggregateDurationMs += run.durationMs || 0;
       row.lastCompletionMs = Math.max(
         row.lastCompletionMs,
-        run.completedAt?.getTime() || 0
+        run.completedAt?.getTime() || 0,
       );
     }
     row.totalScore = Math.round(row.totalScore * 100) / 100;
@@ -84,7 +84,7 @@ export function rankIndividualRuns(runs: StandingsRun[]) {
       b.totalScore - a.totalScore ||
       b.challengesCompleted - a.challengesCompleted ||
       a.aggregateDurationMs - b.aggregateDurationMs ||
-      a.lastCompletionMs - b.lastCompletionMs
+      a.lastCompletionMs - b.lastCompletionMs,
   );
 
   return rows.map(({ best: _best, ...row }, index) => ({
@@ -103,7 +103,7 @@ export function rankTeamStandings(
     teamName: string;
     members: Array<{ userId: string; userName: string }>;
   }>,
-  runs: StandingsRun[]
+  runs: StandingsRun[],
 ): TeamStanding[] {
   // Map each user to their best run per challenge
   const userBestMap = new Map<string, Map<string, StandingsRun>>();
@@ -137,7 +137,7 @@ export function rankTeamStandings(
           aggregateDurationMs += run.durationMs || 0;
           lastCompletionMs = Math.max(
             lastCompletionMs,
-            run.completedAt?.getTime() || 0
+            run.completedAt?.getTime() || 0,
           );
         }
       }
@@ -175,7 +175,7 @@ export function rankTeamStandings(
       b.totalScore - a.totalScore ||
       b.challengesCompleted - a.challengesCompleted ||
       a.aggregateDurationMs - b.aggregateDurationMs ||
-      a.lastCompletionMs - b.lastCompletionMs
+      a.lastCompletionMs - b.lastCompletionMs,
   );
 
   return teamRows.map((t, index) => ({ ...t, rank: index + 1 }));
@@ -187,7 +187,8 @@ export async function getGameStandings(eventId: string, viewerId?: string) {
       OR: [{ id: eventId }, { slug: eventId }],
     },
   });
-  if (!game) return { error: "Game not found.", standings: [], teamStandings: [] };
+  if (!game)
+    return { error: "Game not found.", standings: [], teamStandings: [] };
 
   const now = new Date();
   if (game.status === "PUBLISHED" && game.endTime && now >= game.endTime) {
@@ -223,12 +224,10 @@ export async function getGameStandings(eventId: string, viewerId?: string) {
         select: {
           id: true,
           name: true,
-          memberships: {
-            include: { team: true },
-          },
         },
       },
       team: true,
+      rosterTeam: { select: { name: true } },
     },
   });
 
@@ -243,78 +242,30 @@ export async function getGameStandings(eventId: string, viewerId?: string) {
               finalScore: run.finalScore,
               durationMs: run.durationMs,
               completedAt: run.completedAt,
-              teamId: run.teamId || run.user.memberships[0]?.teamId,
-              teamName: run.team?.name || run.user.memberships[0]?.team?.name,
+              teamId: run.rosterTeamId || run.teamId,
+              teamName: run.rosterTeam?.name || run.team?.name,
             },
           ]
-        : []
-    )
+        : [],
+    ),
   );
 
-  // Collect teams and participating members
-  const teamsMap = new Map<
-    string,
-    { teamId: string; teamName: string; membersMap: Map<string, string> }
-  >();
-
-  // 1. Collect from event registrations
-  const registrations = await prisma.gameRegistration.findMany({
-    where: { eventId: game.id, status: "REGISTERED" },
+  const rosterTeams = await prisma.competitionTeam.findMany({
+    where: { eventId: game.id },
     include: {
-      user: {
+      members: {
+        orderBy: { position: "asc" },
         select: {
           id: true,
-          name: true,
-          memberships: {
-            include: { team: true },
-          },
+          position: true,
+          userId: true,
+          user: { select: { name: true } },
         },
       },
     },
   });
-
-  for (const reg of registrations) {
-    for (const mem of reg.user.memberships) {
-      if (!teamsMap.has(mem.teamId)) {
-        teamsMap.set(mem.teamId, {
-          teamId: mem.teamId,
-          teamName: mem.team.name,
-          membersMap: new Map(),
-        });
-      }
-      teamsMap.get(mem.teamId)!.membersMap.set(reg.user.id, reg.user.name);
-    }
-  }
-
-  // 2. Collect from completed runs
-  for (const r of runs) {
-    const tId = r.teamId || r.user?.memberships[0]?.teamId;
-    const tName = r.team?.name || r.user?.memberships[0]?.team?.name;
-    if (tId && tName) {
-      if (!teamsMap.has(tId)) {
-        teamsMap.set(tId, {
-          teamId: tId,
-          teamName: tName,
-          membersMap: new Map(),
-        });
-      }
-      if (r.userId && r.user) {
-        teamsMap.get(tId)!.membersMap.set(r.userId, r.user.name);
-      }
-    }
-  }
-
-  const teamList = Array.from(teamsMap.values()).map((t) => ({
-    teamId: t.teamId,
-    teamName: t.teamName,
-    members: Array.from(t.membersMap.entries()).map(([userId, userName]) => ({
-      userId,
-      userName,
-    })),
-  }));
-
-  const teamStandings = rankTeamStandings(
-    teamList,
+  const teamStandings = rankRosterTeams(
+    rosterTeams,
     runs.flatMap((run) =>
       run.userId && run.user
         ? [
@@ -325,11 +276,11 @@ export async function getGameStandings(eventId: string, viewerId?: string) {
               finalScore: run.finalScore,
               durationMs: run.durationMs,
               completedAt: run.completedAt,
-              teamId: run.teamId,
+              teamId: run.rosterTeamId,
             },
           ]
-        : []
-    )
+        : [],
+    ),
   );
 
   return {
@@ -342,4 +293,39 @@ export async function getGameStandings(eventId: string, viewerId?: string) {
       isViewer: row.members.some((m) => m.userId === viewerId),
     })),
   };
+}
+
+export interface RosterStandingTeam {
+  id: string;
+  name: string;
+  members: {
+    id: string;
+    position: number;
+    userId: string | null;
+    user: { name: string } | null;
+  }[];
+}
+export function rankRosterTeams(
+  teams: RosterStandingTeam[],
+  runs: StandingsRun[],
+): TeamStanding[] {
+  // Filter by authoritative roster team as well as user; legacy runs cannot leak into team scores.
+  const memberTeams = new Map<string, string>();
+  for (const team of teams)
+    for (const member of team.members)
+      if (member.userId) memberTeams.set(member.userId, team.id);
+  return rankTeamStandings(
+    teams.map((team) => ({
+      teamId: team.id,
+      teamName: team.name,
+      members: team.members.map((member) => ({
+        userId: member.userId || `unclaimed:${member.id}`,
+        userName:
+          member.user?.name || `Member ${member.position + 1} · Not joined`,
+      })),
+    })),
+    runs.filter(
+      (run) => !!run.teamId && memberTeams.get(run.userId) === run.teamId,
+    ),
+  );
 }

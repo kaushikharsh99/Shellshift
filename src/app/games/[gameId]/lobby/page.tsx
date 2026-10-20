@@ -1,3 +1,5 @@
+import { getAssignedQuestions } from "@/lib/games/assignmentService";
+import { getRosterMembership } from "@/lib/games/rosterService";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
@@ -29,12 +31,9 @@ export default async function Lobby({
       registrations: {
         where: { userId: user.id, status: "REGISTERED" },
       },
-      challenges: {
-        orderBy: { order: "asc" },
-        include: { challenge: true },
-      },
       runs: {
         where: { userId: user.id },
+        select: { id: true, challengeId: true, status: true },
       },
     },
   });
@@ -49,8 +48,17 @@ export default async function Lobby({
     notFound();
   }
 
+  const membership = await getRosterMembership(g.id, user.id);
+  if (!membership) redirect(`/register?eventId=${g.id}`);
+  // Existing roster members may predate automatic registration on email matching.
   if (!g.registrations.length) {
-    redirect(`/games/${g.id}`);
+    if (g.status !== "PUBLISHED" || (g.endTime && g.endTime <= new Date()))
+      redirect(`/games/${g.id}/standings`);
+    await prisma.gameRegistration.upsert({
+      where: { eventId_userId: { eventId: g.id, userId: user.id } },
+      update: { status: "REGISTERED" },
+      create: { eventId: g.id, userId: user.id },
+    });
   }
 
   const now = new Date();
@@ -70,37 +78,17 @@ export default async function Lobby({
       startsAt: g.startTime,
       endsAt: g.endTime,
     },
-    now
+    now,
   );
 
-  const isEnded = phase === "ENDED" || g.status === "ENDED" || (!!g.endTime && now >= g.endTime);
+  const isEnded =
+    phase === "ENDED" ||
+    g.status === "ENDED" ||
+    (!!g.endTime && now >= g.endTime);
   const live = phase === "LIVE" && !isEnded;
 
-  // Distinct question assignment: Each team member receives distinct, non-overlapping questions
-  const userMembership = await prisma.teamMembership.findFirst({
-    where: { userId: user.id },
-    include: {
-      team: {
-        include: {
-          memberships: {
-            orderBy: { createdAt: "asc" },
-            include: { user: { select: { id: true, name: true } } },
-          },
-        },
-      },
-    },
-  });
-
-  const team = userMembership?.team;
-  const teamMembers = team?.memberships || [];
-  const memberCount = Math.max(1, teamMembers.length);
-  const sortedMemberIds = teamMembers.map((m) => m.userId).sort();
-  const memberIndex = sortedMemberIds.indexOf(user.id);
-  const effectiveIndex = memberIndex >= 0 ? memberIndex : 0;
-
-  const assignedChallenges = memberCount > 1
-    ? g.challenges.filter((_, idx) => idx % memberCount === effectiveIndex)
-    : g.challenges;
+  const team = membership.team;
+  const assigned = await getAssignedQuestions(g.id, user.id);
 
   return (
     <div className="min-h-screen bg-[#07080b] text-white">
@@ -109,7 +97,11 @@ export default async function Lobby({
         <div className="flex flex-col justify-between gap-5 border-b border-zinc-800 pb-7 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm text-cyan-400">
-              {isEnded ? "Competition concluded" : live ? "Competition live" : "Waiting room"}
+              {isEnded
+                ? "Competition concluded"
+                : live
+                  ? "Competition live"
+                  : "Waiting room"}
             </p>
             <h1 className="mt-2 text-3xl font-semibold">{g.name}</h1>
           </div>
@@ -134,9 +126,12 @@ export default async function Lobby({
           {isEnded ? (
             <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-rose-500/30 bg-rose-950/20 p-5 text-sm">
               <div>
-                <p className="font-semibold text-rose-300">This live competition has concluded.</p>
+                <p className="font-semibold text-rose-300">
+                  This live competition has concluded.
+                </p>
                 <p className="text-xs text-zinc-400 mt-1">
-                  Submissions are closed. Check the event leaderboard to see final verified standings and rankings.
+                  Submissions are closed. Check the event leaderboard to see
+                  final verified standings and rankings.
                 </p>
               </div>
               <Link
@@ -148,42 +143,28 @@ export default async function Lobby({
             </div>
           ) : !live ? (
             <div className="mb-6 rounded-xl border border-cyan-900/60 bg-cyan-950/20 p-5 text-sm text-cyan-100">
-              You’re registered. Challenge details unlock when the competition begins.
+              You’re registered. Challenge details unlock when the competition
+              begins.
             </div>
           ) : null}
 
-          {team && memberCount > 1 && (
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-800/40 bg-cyan-950/20 p-4 text-xs font-mono">
-              <div className="flex items-center gap-2.5">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-cyan-900/60 text-cyan-300 font-bold">
-                  {effectiveIndex + 1}
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-white text-sm">{team.name}</span>
-                    <span className="rounded bg-cyan-950 border border-cyan-800/60 px-1.5 py-0.5 text-[10px] text-cyan-400 font-semibold">
-                      Member {effectiveIndex + 1} of {memberCount}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Your assigned missions are unique to you. Teammates receive different questions to maximize team average score.
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">Assigned Missions</span>
-                <span className="text-sm font-bold text-emerald-400 font-mono">
-                  {assignedChallenges.length} <span className="text-zinc-500 font-normal">/ {g.challenges.length} total</span>
-                </span>
-              </div>
-            </div>
-          )}
+          <div className="mb-6 rounded-xl border border-cyan-800/40 bg-cyan-950/20 p-4 text-sm text-zinc-300">
+            Playing for{" "}
+            <Link
+              className="font-semibold text-cyan-300"
+              href={`/games/${g.id}/team`}
+            >
+              {team.name}
+            </Link>
+            . You have 15 assigned questions in your own shuffled order. Your
+            progress and score are your own. Every roster member contributes to
+            the team average.
+          </div>
 
           <GameLobby
             gameId={g.id}
             live={live}
-            challenges={assignedChallenges.map((x) => {
+            challenges={assigned.map((x) => {
               const run = g.runs.find((r) => r.challengeId === x.challengeId);
               return {
                 id: x.challenge.id,

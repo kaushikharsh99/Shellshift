@@ -1,8 +1,12 @@
+import { validateRosterQuestionPool } from "./assignmentService";
+import { parseRosterCsv } from "./roster";
+import { createCompetitionRoster } from "./rosterService";
 import { prisma } from "@/lib/prisma";
 import { canTransitionGame, validateGameSchedule } from "./lifecycle";
 import type { StoredGameStatus } from "./types";
 
 export interface GameAdminInput {
+  rosterCsv?: string;
   name: string;
   slug: string;
   description?: string;
@@ -108,6 +112,11 @@ export function validatePublishableGame(input: GameAdminInput) {
 }
 
 export async function createGameDraft(input: GameAdminInput, actorId: string) {
+  const roster = parseRosterCsv(
+    typeof input.rosterCsv === "string" ? input.rosterCsv : "",
+  );
+  if (roster.errors.length)
+    return { fieldErrors: { rosterCsv: roster.errors.join(" ") } };
   const normalized = normalizeGameInput(input);
   if (!normalized.data) return normalized;
   const { challengeIds, ...data } = normalized.data;
@@ -128,6 +137,7 @@ export async function createGameDraft(input: GameAdminInput, actorId: string) {
     const created = await tx.event.create({
       data: { ...data, status: "DRAFT", createdById: actorId },
     });
+    await createCompetitionRoster(tx, created.id, roster.teams);
     if (challengeIds.length) {
       await tx.eventChallenge.createMany({
         data: challengeIds.map((challengeId, order) => ({
@@ -154,6 +164,15 @@ export async function updateGameDraft(
   input: GameAdminInput,
   actorId: string,
 ) {
+  const current = await prisma.event.findUnique({
+    where: { id: gameId },
+    select: { status: true },
+  });
+  if (!current || current.status !== "DRAFT")
+    return {
+      error:
+        "Only draft competitions can be edited. Published question assignments are locked.",
+    };
   const normalized = normalizeGameInput(input);
   if (!normalized.data) return normalized;
   const { challengeIds, ...data } = normalized.data;
@@ -179,6 +198,12 @@ export async function updateGameDraft(
     }
   }
   const game = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${gameId} FOR UPDATE`;
+    const locked = await tx.event.findUnique({
+      where: { id: gameId },
+      select: { status: true },
+    });
+    if (!locked || locked.status !== "DRAFT") return null;
     const updated = await tx.event.update({ where: { id: gameId }, data });
     await tx.eventChallenge.deleteMany({ where: { eventId: gameId } });
     if (challengeIds.length)
@@ -198,29 +223,42 @@ export async function updateGameDraft(
     });
     return updated;
   });
+  if (!game) return { error: "Published question assignments are locked." };
   return { game, fieldErrors: {} };
 }
 
 export async function publishGame(gameId: string, actorId: string) {
-  const game = await prisma.event.findUnique({
-    where: { id: gameId },
-    include: { challenges: { include: { challenge: true } } },
-  });
-  if (!game) return { error: "Game not found." };
-  const fieldErrors: Record<string, string> = {};
-  if (!game.challenges.some((item) => item.challenge.isPublished))
-    fieldErrors.challengeIds = "Choose at least one published challenge.";
-  if (
-    !game.registrationOpensAt ||
-    !game.registrationClosesAt ||
-    !game.startTime ||
-    !game.endTime
-  )
-    fieldErrors.schedule = "Complete the game schedule.";
-  if (Object.keys(fieldErrors).length)
-    return { error: "Game is not ready to publish.", fieldErrors };
-  const updated = await prisma.$transaction(async (tx) => {
-    const result = await tx.event.update({
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${gameId} FOR UPDATE`;
+    const game = await tx.event.findUnique({
+      where: { id: gameId },
+      include: { challenges: { include: { challenge: true } } },
+    });
+    if (!game) return { error: "Game not found." };
+    if (game.status !== "DRAFT")
+      return { error: "Only draft competitions can be published." };
+    const fieldErrors: Record<string, string> = {};
+    const poolError = await validateRosterQuestionPool(
+      gameId,
+      game.challenges.length,
+      tx,
+    );
+    if (poolError) fieldErrors.challengeIds = poolError;
+    if (game.challenges.some((item) => !item.challenge.isPublished))
+      fieldErrors.challengeIds =
+        "Remove hidden questions before publishing this competition.";
+    if (!(await tx.competitionTeam.count({ where: { eventId: gameId } })))
+      fieldErrors.rosterCsv = "Upload a team roster before publishing.";
+    if (
+      !game.registrationOpensAt ||
+      !game.registrationClosesAt ||
+      !game.startTime ||
+      !game.endTime
+    )
+      fieldErrors.schedule = "Complete the game schedule.";
+    if (Object.keys(fieldErrors).length)
+      return { error: "Game is not ready to publish.", fieldErrors };
+    const updated = await tx.event.update({
       where: { id: gameId },
       data: { status: "PUBLISHED" },
     });
@@ -231,9 +269,8 @@ export async function publishGame(gameId: string, actorId: string) {
         details: JSON.stringify({ eventId: gameId }),
       },
     });
-    return result;
+    return { game: updated };
   });
-  return { game: updated };
 }
 
 export async function transitionGameStatus(
@@ -243,6 +280,13 @@ export async function transitionGameStatus(
 ) {
   const current = await prisma.event.findUnique({ where: { id: gameId } });
   if (!current) return { error: "Game not found." };
+  if (status === "DRAFT" && current.status !== "DRAFT")
+    return {
+      error:
+        "Published competitions cannot return to draft; question assignments are locked.",
+    };
+  if (status === "PUBLISHED" && current.status === "DRAFT")
+    return publishGame(gameId, actorId);
   if (!canTransitionGame(current.status as StoredGameStatus, status))
     return { error: `Cannot move ${current.status} to ${status}.` };
   const game = await prisma.$transaction(async (tx) => {
@@ -281,9 +325,7 @@ export function checkGameDeletionEligibility(
   }
   if (
     mode === "draft_only" &&
-    (game.status !== "DRAFT" ||
-      game.registrationCount > 0 ||
-      game.runCount > 0)
+    (game.status !== "DRAFT" || game.registrationCount > 0 || game.runCount > 0)
   ) {
     return {
       eligible: false,

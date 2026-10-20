@@ -25,13 +25,20 @@ interface LiveOperationsProps {
   initialData: any;
 }
 
-export function LiveOperations({ game: initialGame, initialData }: LiveOperationsProps) {
+export function LiveOperations({
+  game: initialGame,
+  initialData,
+}: LiveOperationsProps) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"participants" | "activity" | "standings">("participants");
+  const [activeTab, setActiveTab] = useState<
+    "participants" | "activity" | "standings"
+  >("participants");
 
   // Confirmation dialogs
-  const [confirmAction, setConfirmAction] = useState<"PAUSE" | "RESUME" | "END" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    "PAUSE" | "RESUME" | "END" | null
+  >(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -68,8 +75,8 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
       confirmAction === "PAUSE"
         ? "PAUSED"
         : confirmAction === "RESUME"
-        ? "PUBLISHED"
-        : "ENDED";
+          ? "PUBLISHED"
+          : "ENDED";
 
     try {
       const res = await fetch(`/api/admin/games/${game.id}/status`, {
@@ -111,12 +118,15 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
               <Shield className="size-5 text-cyan-400" />
               <span>{game.name} · Live Operations</span>
             </h1>
-            <StatusBadge tone={isEnded ? "neutral" : isPaused ? "warning" : "success"}>
+            <StatusBadge
+              tone={isEnded ? "neutral" : isPaused ? "warning" : "success"}
+            >
               {game.status}
             </StatusBadge>
           </div>
           <p className="text-xs text-zinc-400">
-            Real-time competition supervision, participant audit telemetry, and emergency controls.
+            Real-time competition supervision, participant audit telemetry, and
+            emergency controls.
           </p>
         </div>
 
@@ -175,15 +185,21 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
           <div className="text-3xl font-extrabold text-cyan-400 tabular-nums">
             {data?.metrics?.registeredCount ?? 0}
           </div>
-          <span className="text-[10px] text-zinc-500">Individual registrations</span>
+          <span className="text-[10px] text-zinc-500">
+            Individual registrations
+          </span>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-[#0e1016] p-4 text-center">
-          <span className="text-[10px] uppercase font-semibold text-zinc-500">Active Runs</span>
+          <span className="text-[10px] uppercase font-semibold text-zinc-500">
+            Active Runs
+          </span>
           <div className="text-3xl font-extrabold text-emerald-400 tabular-nums">
             {data?.metrics?.activeCount ?? 0}
           </div>
-          <span className="text-[10px] text-zinc-500">In-progress missions right now</span>
+          <span className="text-[10px] text-zinc-500">
+            In-progress missions right now
+          </span>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-[#0e1016] p-4 text-center">
@@ -193,7 +209,9 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
           <div className="text-3xl font-extrabold text-amber-400 tabular-nums">
             {data?.metrics?.completedCount ?? 0}
           </div>
-          <span className="text-[10px] text-zinc-500">Verified successful completions</span>
+          <span className="text-[10px] text-zinc-500">
+            Verified successful completions
+          </span>
         </div>
       </div>
 
@@ -247,11 +265,16 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
         />
       )}
 
-      {activeTab === "activity" && <ActivityFeed activity={data?.activity ?? []} />}
+      {activeTab === "activity" && (
+        <ActivityFeed activity={data?.activity ?? []} />
+      )}
 
       {activeTab === "standings" && (
         <div className="rounded-xl border border-zinc-800 bg-[#0e1016] p-4">
-          <StandingsTable rows={data?.standings ?? []} gameId={game.id} />
+          <StandingsTable
+            rows={data?.standings ?? []}
+            teamRows={data?.teamStandings}
+          />
         </div>
       )}
 
@@ -263,22 +286,23 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
           confirmAction === "PAUSE"
             ? "Pause Live Competition?"
             : confirmAction === "RESUME"
-            ? "Resume Live Competition?"
-            : "Permanently End Competition?"
+              ? "Resume Live Competition?"
+              : "Permanently End Competition?"
         }
       >
         <div className="space-y-4 font-mono text-xs text-zinc-300">
           {confirmAction === "PAUSE" && (
             <p>
-              Pausing prevents active contestants from executing new terminal commands or starting
-              runs. Timers will be held according to tournament scoring rules.
+              Pausing prevents active contestants from executing new terminal
+              commands or starting runs. Timers will be held according to
+              tournament scoring rules.
             </p>
           )}
 
           {confirmAction === "RESUME" && (
             <p>
-              Resuming will immediately allow registered contenders to continue executing commands
-              and solving challenges.
+              Resuming will immediately allow registered contenders to continue
+              executing commands and solving challenges.
             </p>
           )}
 
@@ -289,8 +313,8 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
                 <span>This action cannot be undone.</span>
               </div>
               <p>
-                Ending this game permanently freezes all runs, computes final individual standings,
-                and locks all challenge sandboxes.
+                Ending this game permanently freezes all runs, computes final
+                individual standings, and locks all challenge sandboxes.
               </p>
             </div>
           )}
@@ -317,8 +341,8 @@ export function LiveOperations({ game: initialGame, initialData }: LiveOperation
                 confirmAction === "END"
                   ? "bg-rose-600 text-white hover:bg-rose-500"
                   : confirmAction === "PAUSE"
-                  ? "bg-amber-600 text-black hover:bg-amber-500"
-                  : "bg-cyan-500 text-black hover:bg-cyan-400"
+                    ? "bg-amber-600 text-black hover:bg-amber-500"
+                    : "bg-cyan-500 text-black hover:bg-cyan-400"
               }`}
             >
               {actionLoading ? "Processing..." : `Confirm ${confirmAction}`}

@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, CheckCheck, RotateCcw, Search, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCheck,
+  RotateCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export interface CatalogChallenge {
@@ -61,7 +68,8 @@ export function ChallengeLineupSelector({
   };
 
   const addAll = () => {
-    const toAdd = unselectedFiltered.length > 0 ? unselectedFiltered : unselectedTotal;
+    const toAdd =
+      unselectedFiltered.length > 0 ? unselectedFiltered : unselectedTotal;
     if (toAdd.length === 0) return;
     const newIds = [...selectedIds, ...toAdd.map((c) => c.id)];
     onChange(newIds);
@@ -99,7 +107,8 @@ export function ChallengeLineupSelector({
         <div>
           <h2 className="text-xl font-semibold">Choose the challenge lineup</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Select and order challenges. Players will solve them in this order.
+            Choose the question pool. Each member gets 15 questions in a stable
+            shuffled order; teams of 1–3 have no overlap.
           </p>
         </div>
         <div className="flex items-center gap-2">

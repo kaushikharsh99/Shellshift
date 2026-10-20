@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Fragment, useEffect, useState, useCallback, useRef } from "react";
+import {
+  LeaderboardDetailSwitch,
+  LeaderboardMemberDetails,
+} from "./LeaderboardDetails";
 import { RefreshCw, Users, User } from "lucide-react";
 import type { TeamStanding } from "@/lib/games/standings";
 
@@ -14,9 +18,11 @@ export interface Standing {
   isViewer?: boolean;
 }
 
+const EMPTY_TEAM_ROWS: TeamStanding[] = [];
+
 export function StandingsTable({
   rows,
-  teamRows = [],
+  teamRows = EMPTY_TEAM_ROWS,
   gameId,
   currentUserId,
   currentTeamId,
@@ -30,11 +36,12 @@ export function StandingsTable({
   const [dataRows, setDataRows] = useState<Standing[]>(rows);
   const [dataTeamRows, setDataTeamRows] = useState<TeamStanding[]>(teamRows);
   const [viewMode, setViewMode] = useState<"teams" | "individuals">(
-    teamRows.length > 0 ? "teams" : "individuals"
+    teamRows.length > 0 ? "teams" : "individuals",
   );
+  const [detailed, setDetailed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [secondsAgo, setSecondsAgo] = useState(0);
-  const lastUpdatedRef = useRef<number>(Date.now());
+  const lastUpdatedRef = useRef<number>(0);
   const isIdleRef = useRef<boolean>(false);
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -46,13 +53,20 @@ export function StandingsTable({
 
   const fetchLatest = useCallback(async () => {
     if (!gameId) return;
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState !== "visible"
+    )
+      return;
 
     setIsRefreshing(true);
     try {
-      const res = await fetch(`/api/games/${encodeURIComponent(gameId)}/standings`, {
-        cache: "default", // Allows browser and Vercel Edge CDN caching
-      });
+      const res = await fetch(
+        `/api/games/${encodeURIComponent(gameId)}/standings`,
+        {
+          cache: "default", // Allows browser and Vercel Edge CDN caching
+        },
+      );
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json?.standings)) {
@@ -136,10 +150,14 @@ export function StandingsTable({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            <span className="text-[11px] font-semibold tracking-wider">LIVE STANDINGS</span>
-            <span className="hidden sm:inline text-[10px] text-zinc-500">
-              · Updated {secondsAgo}s ago
+            <span className="text-[11px] font-semibold tracking-wider">
+              LIVE STANDINGS
             </span>
+            {gameId && (
+              <span className="hidden sm:inline text-[10px] text-zinc-500">
+                · Updated {secondsAgo}s ago
+              </span>
+            )}
           </div>
 
           {dataTeamRows.length > 0 && (
@@ -174,9 +192,10 @@ export function StandingsTable({
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
           {viewMode === "teams" && (
-            <span className="text-[10px] text-zinc-500 hidden md:inline">
-              Team score = exact average of all member scores
-            </span>
+            <LeaderboardDetailSwitch
+              detailed={detailed}
+              onChange={setDetailed}
+            />
           )}
           {gameId && (
             <button
@@ -185,7 +204,9 @@ export function StandingsTable({
               className="inline-flex items-center gap-1.5 rounded border border-zinc-800 bg-zinc-900/60 px-2 py-1 text-[10px] text-zinc-400 transition hover:border-zinc-700 hover:text-white disabled:opacity-50"
               title="Refresh standings"
             >
-              <RefreshCw className={`size-3 ${isRefreshing ? "animate-spin text-cyan-400" : ""}`} />
+              <RefreshCw
+                className={`size-3 ${isRefreshing ? "animate-spin text-cyan-400" : ""}`}
+              />
               <span>Refresh</span>
             </button>
           )}
@@ -194,69 +215,67 @@ export function StandingsTable({
 
       {viewMode === "teams" ? (
         <>
-          <table className="w-full min-w-[620px] text-left text-sm">
+          <table className="w-full table-fixed text-left text-xs sm:text-sm">
             <thead className="text-xs uppercase tracking-wider text-zinc-500">
               <tr>
-                <th className="p-4 w-16">Rank</th>
+                <th className="p-2 sm:p-4 w-10 sm:w-16">Rank</th>
                 <th>Team</th>
-                <th>Avg Score</th>
-                <th>Total Solved</th>
-                <th>Time</th>
+                <th className="w-20 sm:w-32">Score</th>
+
+                <th className="w-20 sm:w-32">Time</th>
               </tr>
             </thead>
             <tbody>
               {dataTeamRows.map((r) => {
-                const isViewer = r.isViewer || (currentTeamId && r.teamId === currentTeamId);
+                const isViewer =
+                  r.isViewer || (currentTeamId && r.teamId === currentTeamId);
 
                 return (
-                  <tr
-                    key={r.teamId}
-                    className={`border-t border-zinc-800 transition-colors ${
-                      isViewer ? "bg-cyan-950/25 border-l-2 border-l-cyan-400" : "hover:bg-zinc-900/30"
-                    }`}
-                  >
-                    <td className="p-4 font-mono text-cyan-300">#{r.rank}</td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-white">{r.teamName}</span>
-                        {isViewer ? (
-                          <span className="text-xs font-semibold text-cyan-300 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/50">
-                            Your Team
+                  <Fragment key={r.teamId}>
+                    <tr
+                      key={r.teamId}
+                      className={`border-t border-zinc-800 transition-colors ${
+                        isViewer
+                          ? "bg-cyan-950/25 border-l-2 border-l-cyan-400"
+                          : "hover:bg-zinc-900/30"
+                      }`}
+                    >
+                      <td className="p-2 sm:p-4 font-mono text-cyan-300">
+                        #{r.rank}
+                      </td>
+                      <td className="p-2 sm:p-4">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-medium break-words text-white">
+                            {r.teamName}
                           </span>
-                        ) : null}
-                        <span className="text-[10px] text-zinc-500 font-mono">
-                          ({r.memberCount} {r.memberCount === 1 ? "member" : "members"})
-                        </span>
-                      </div>
-                      {r.members && r.members.length > 0 && (
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {r.members.map((m) => (
-                            <span
-                              key={m.userId}
-                              className="inline-flex items-center gap-1 rounded bg-zinc-900/80 px-2 py-0.5 text-[10px] font-mono text-zinc-400 border border-zinc-800/60"
-                            >
-                              <span>{m.userName}</span>
-                              <span className="text-cyan-400 font-semibold">{m.score} pts</span>
+                          {isViewer ? (
+                            <span className="text-xs font-semibold text-cyan-300 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/50">
+                              You
                             </span>
-                          ))}
+                          ) : null}
+                          <span className="basis-full text-[10px] text-zinc-500 font-sans">
+                            ({r.memberCount}{" "}
+                            {r.memberCount === 1 ? "member" : "members"})
+                          </span>
                         </div>
-                      )}
-                    </td>
-                    <td className="p-4 font-mono font-bold text-cyan-300">
-                      {r.totalScore % 1 === 0
-                        ? r.totalScore.toLocaleString()
-                        : r.totalScore.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                      <span className="text-[10px] font-normal text-zinc-500">PTS (avg)</span>
-                    </td>
-                    <td className="p-4 font-mono text-zinc-300">{r.challengesCompleted}</td>
-                    <td className="p-4 font-mono text-zinc-400">
-                      {Math.floor(r.aggregateDurationMs / 60000)}m{" "}
-                      {Math.floor(r.aggregateDurationMs / 1000) % 60}s
-                    </td>
-                  </tr>
+                        {detailed && (
+                          <LeaderboardMemberDetails members={r.members} />
+                        )}
+                      </td>
+                      <td className="p-2 sm:p-4 font-mono font-bold text-cyan-300">
+                        {r.totalScore % 1 === 0
+                          ? r.totalScore.toLocaleString()
+                          : r.totalScore.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                      </td>
+                      <td className="p-2 sm:p-4 font-mono text-zinc-400">
+                        {Math.floor(r.aggregateDurationMs / 60000)}m{" "}
+                        {Math.floor(r.aggregateDurationMs / 1000) % 60}s
+                      </td>
+                    </tr>
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -281,7 +300,8 @@ export function StandingsTable({
             </thead>
             <tbody>
               {dataRows.map((r) => {
-                const isViewer = r.isViewer || (currentUserId && r.userId === currentUserId);
+                const isViewer =
+                  r.isViewer || (currentUserId && r.userId === currentUserId);
 
                 return (
                   <tr
@@ -306,9 +326,10 @@ export function StandingsTable({
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{" "}
-                      <span className="text-[10px] font-normal text-zinc-500">PTS</span>
+                      <span className="text-[10px] font-normal text-zinc-500">
+                        PTS
+                      </span>
                     </td>
-                    <td className="p-4 font-mono text-zinc-300">{r.challengesCompleted}</td>
                     <td className="p-4 font-mono text-zinc-400">
                       {Math.floor(r.aggregateDurationMs / 60000)}m{" "}
                       {Math.floor(r.aggregateDurationMs / 1000) % 60}s
