@@ -15,7 +15,7 @@ export function LeaderboardDetailSwitch({
       aria-pressed={detailed}
       onClick={() => onChange(!detailed)}
       title={detailed ? "Hide member details" : "Show member details"}
-      className="shrink-0 rounded border border-zinc-800 bg-zinc-900/60 px-2 py-1 text-[10px] font-normal text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200 focus-visible:outline-2 focus-visible:outline-cyan-400"
+      className="shrink-0 rounded border border-zinc-800 bg-zinc-900/60 px-1.5 py-0.5 text-[9px] font-normal text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200 focus-visible:outline-2 focus-visible:outline-cyan-400"
     >
       {detailed ? "Hide details" : "Show details"}
     </button>

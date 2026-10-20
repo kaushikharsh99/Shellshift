@@ -165,7 +165,7 @@ export function StandingsTable({
               <button
                 type="button"
                 onClick={() => setViewMode("teams")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition ${
                   viewMode === "teams"
                     ? "bg-cyan-950 text-cyan-300 border border-cyan-800/80 shadow-sm"
                     : "text-zinc-400 hover:text-white"
@@ -177,7 +177,7 @@ export function StandingsTable({
               <button
                 type="button"
                 onClick={() => setViewMode("individuals")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition ${
                   viewMode === "individuals"
                     ? "bg-cyan-950 text-cyan-300 border border-cyan-800/80 shadow-sm"
                     : "text-zinc-400 hover:text-white"

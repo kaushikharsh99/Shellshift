@@ -75,6 +75,7 @@ export default async function TeamProfile({
         : [],
     ),
   )[0];
+  const joinedCount = team.members.filter((member) => member.userId).length;
   return (
     <div className="min-h-screen bg-[#07080b] text-white">
       <Navbar user={user} />
@@ -95,7 +96,9 @@ export default async function TeamProfile({
           </p>
           <p className="mt-3 text-sm text-zinc-400">
             {scoresVisible
-              ? `Total member scores ÷ ${team.members.length} roster ${team.members.length === 1 ? "member" : "members"}. Listed members who haven’t played count as zero.`
+              ? joinedCount > 0
+                ? `Total member scores ÷ ${joinedCount} joined ${joinedCount === 1 ? "member" : "members"}. Joined members who haven’t played count as zero.`
+                : "No members have joined yet."
               : "Scores will appear when the organizer makes standings available."}
           </p>
         </div>

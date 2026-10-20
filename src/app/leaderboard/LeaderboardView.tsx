@@ -182,9 +182,9 @@ export function LeaderboardView({
   return (
     <div className="space-y-4">
       {/* View Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 bg-[#121215] border border-[#27272a] rounded-lg">
-        <div className="flex items-center gap-2 px-2 text-xs font-bold text-cyan-400">
-          <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-1.5 bg-[#121215] border border-[#27272a] rounded-lg">
+        <div className="flex items-center gap-1.5 px-1.5 text-[11px] font-bold text-cyan-400">
+          <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
           <span>Points Leaderboard</span>
           {eventName && (
             <span className="text-zinc-500 font-normal truncate max-w-[200px] sm:max-w-none">
@@ -193,25 +193,25 @@ export function LeaderboardView({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#a1a1aa] px-2 font-mono">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] text-[#a1a1aa] px-1.5 font-mono">
           {liveTeamEntries.length > 0 && (
             <div className="flex items-center gap-1 rounded bg-[#18181b] p-0.5 border border-[#27272a]">
               <button
                 type="button"
                 onClick={() => setViewMode("teams")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition ${
                   viewMode === "teams"
                     ? "bg-cyan-950 text-cyan-300 border border-cyan-800/80 shadow-sm"
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
-                <Users className="w-3.5 h-3.5" />
+                <Users className="w-3 h-3" />
                 <span>Teams ({liveTeamEntries.length})</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("individuals")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition ${
                   viewMode === "individuals"
                     ? "bg-cyan-950 text-cyan-300 border border-cyan-800/80 shadow-sm"
                     : "text-zinc-400 hover:text-white"
@@ -256,9 +256,9 @@ export function LeaderboardView({
               onChange={setDetailed}
             />
           )}
-          <span className="hidden xl:inline">
-            {viewMode === "teams" ? "Average score" : "Total points"} → Time
-          </span>
+          {viewMode === "individuals" && (
+            <span className="hidden xl:inline">Total points → Time</span>
+          )}
         </div>
       </div>
 
@@ -282,9 +282,7 @@ export function LeaderboardView({
                   <tr>
                     <th className="py-3 px-2 sm:px-4 w-10 sm:w-20">Rank</th>
                     <th className="py-3 px-3 sm:px-4">Team</th>
-                    <th className="py-3 px-2 sm:px-4 w-20 sm:w-32">
-                      Score
-                    </th>
+                    <th className="py-3 px-2 sm:px-4 w-20 sm:w-32">Score</th>
                     <th className="py-3 px-2 sm:px-4 w-20 sm:w-32">Time</th>
                   </tr>
                 </thead>

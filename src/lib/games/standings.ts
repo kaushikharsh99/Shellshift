@@ -22,7 +22,7 @@ export interface TeamStanding {
   rank: number;
   teamId: string;
   teamName: string;
-  totalScore: number; // Average of all members' scores
+  totalScore: number; // Average of joined members' scores
   memberCount: number;
   members: TeamMemberScore[];
   challengesCompleted: number; // Total challenges completed across team
@@ -31,7 +31,10 @@ export interface TeamStanding {
   isViewer?: boolean;
 }
 
-function isBetterChallengeRun(candidate: StandingsRun, previous?: StandingsRun): boolean {
+function isBetterChallengeRun(
+  candidate: StandingsRun,
+  previous?: StandingsRun,
+): boolean {
   if (!previous) return true;
   if (candidate.finalScore !== previous.finalScore) {
     return candidate.finalScore > previous.finalScore;
@@ -41,8 +44,10 @@ function isBetterChallengeRun(candidate: StandingsRun, previous?: StandingsRun):
   if (candidateDuration !== previousDuration) {
     return candidateDuration < previousDuration;
   }
-  return (candidate.completedAt?.getTime() ?? Number.POSITIVE_INFINITY) <
-    (previous.completedAt?.getTime() ?? Number.POSITIVE_INFINITY);
+  return (
+    (candidate.completedAt?.getTime() ?? Number.POSITIVE_INFINITY) <
+    (previous.completedAt?.getTime() ?? Number.POSITIVE_INFINITY)
+  );
 }
 
 export function rankIndividualRuns(runs: StandingsRun[]) {
@@ -108,14 +113,14 @@ export function rankIndividualRuns(runs: StandingsRun[]) {
 }
 
 /**
- * Computes team standings where team score is the exact average of all members' scores.
+ * Computes team standings where team score is the exact average of joined members' scores.
  * Tie-breaker: Total challenges completed desc -> Aggregate duration asc -> Last completion asc.
  */
 export function rankTeamStandings(
   teams: Array<{
     teamId: string;
     teamName: string;
-    members: Array<{ userId: string; userName: string }>;
+    members: Array<{ userId: string; userName: string; joined?: boolean }>;
   }>,
   runs: StandingsRun[],
 ): TeamStanding[] {
@@ -168,8 +173,13 @@ export function rankTeamStandings(
     });
 
     const memberCount = Math.max(1, team.members.length);
-    // Team score is strictly the average of all team members' scores
-    const averageScore = Math.round((totalScoreSum / memberCount) * 100) / 100;
+    const joinedCount = team.members.filter(
+      (member) => member.joined !== false,
+    ).length;
+    const averageScore =
+      joinedCount > 0
+        ? Math.round((totalScoreSum / joinedCount) * 100) / 100
+        : 0;
 
     return {
       rank: 0,
@@ -334,6 +344,7 @@ export function rankRosterTeams(
       teamName: team.name,
       members: team.members.map((member) => ({
         userId: member.userId || `unclaimed:${member.id}`,
+        joined: !!member.userId,
         userName:
           member.user?.name || `Member ${member.position + 1} · Not joined`,
       })),

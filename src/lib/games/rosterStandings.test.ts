@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { rankRosterTeams } from "./standings";
 describe("complete competition roster standings", () => {
-  it("uses actual roster sizes, including unclaimed and nonplaying members", () => {
+  it("averages only joined members regardless of uploaded roster size", () => {
     const teams = [1, 2, 3, 4].map((size) => ({
       id: `t${size}`,
       name: `Team ${size}`,
@@ -22,8 +22,37 @@ describe("complete competition roster standings", () => {
       teamId: `t${size}`,
     }));
     expect(rankRosterTeams(teams, runs).map((r) => r.totalScore)).toEqual([
-      120, 60, 40, 30,
+      120, 120, 120, 120,
     ]);
+  });
+  it("includes joined members with no completed runs in the average", () => {
+    const rows = rankRosterTeams(
+      [
+        {
+          id: "t",
+          name: "A",
+          members: [
+            { id: "s1", position: 0, userId: "u1", user: { name: "Player" } },
+            { id: "s2", position: 1, userId: "u2", user: { name: "Waiting" } },
+            { id: "s3", position: 2, userId: null, user: null },
+          ],
+        },
+      ],
+      [
+        {
+          userId: "u1",
+          userName: "Player",
+          challengeId: "c",
+          finalScore: 120,
+          durationMs: 100,
+          completedAt: new Date(),
+          teamId: "t",
+        },
+      ],
+    );
+    expect(rows[0].totalScore).toBe(60);
+    expect(rows[0].memberCount).toBe(3);
+    expect(rows[0].members).toHaveLength(3);
   });
   it("counts unplayed teams at zero without returning roster emails", () => {
     const rows = rankRosterTeams(
