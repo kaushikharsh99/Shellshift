@@ -11,7 +11,7 @@ export function StartRunButton({
   className,
 }: {
   challengeId: string;
-  gameId?: string;
+  gameId: string;
   label?: string;
   className?: string;
 }) {

@@ -1,4 +1,3 @@
-import { getAssignedQuestions } from "@/lib/games/assignmentService";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +5,7 @@ import { sanitizeChallengeForPlayer } from "@/lib/challenges/playerView";
 import { evaluateObjective } from "@/lib/vfs/evaluator";
 import { ObjectiveConfig, VfsDirectory, VfsState } from "@/lib/vfs/types";
 import { calculateRunScore } from "@/lib/scoring/scoringEngine";
+import { getNextGameChallenge } from "@/lib/games/nextChallenge";
 
 export const dynamic = "force-dynamic";
 
@@ -84,46 +84,7 @@ export async function GET(
     );
   }
 
-  let nextChallenge = null;
-  if (run.eventId && run.userId) {
-    const allEventChallenges = await getAssignedQuestions(
-      run.eventId,
-      run.userId,
-    );
-
-    const currentEc = allEventChallenges.find(
-      (ec) => ec.challengeId === run.challengeId,
-    );
-    const nextEc = allEventChallenges.find(
-      (ec) => ec.order > (currentEc?.order || 0),
-    );
-    if (nextEc) {
-      nextChallenge = {
-        id: nextEc.challenge.id,
-        order: nextEc.order,
-        title: nextEc.challenge.title,
-        slug: nextEc.challenge.slug,
-        difficulty: nextEc.challenge.difficulty,
-      };
-    }
-  }
-
-  if (!nextChallenge && !run.eventId) {
-    nextChallenge = await prisma.challenge.findFirst({
-      where: {
-        order: { gt: run.challenge.order },
-        isPublished: true,
-      },
-      orderBy: { order: "asc" },
-      select: {
-        id: true,
-        order: true,
-        title: true,
-        slug: true,
-        difficulty: true,
-      },
-    });
-  }
+  const nextChallenge = await getNextGameChallenge(run);
 
   const now = new Date();
   const timeLimitSeconds = run.challenge.timeLimitSeconds || 1200;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { roundScore } from "@/lib/scoring/scoringEngine";
+import { evaluateRunAccess } from "@/lib/games/runAccess";
 
 export async function POST(
   request: Request,
@@ -34,9 +35,15 @@ export async function POST(
     );
   }
 
-  // Check deadline expiration
-  const now = new Date();
-  if (run.deadlineAt && now.getTime() > new Date(run.deadlineAt).getTime()) {
+  const access = evaluateRunAccess(run, session);
+  if (access === "GAME_PAUSED" || access === "GAME_ENDED") {
+    return NextResponse.json(
+      { error: access === "GAME_PAUSED" ? "Game is paused." : "Game has ended." },
+      { status: 409 },
+    );
+  }
+
+  if (access === "RUN_EXPIRED") {
     await prisma.run.updateMany({
       where: { id: run.id, status: "IN_PROGRESS" },
       data: { status: "EXPIRED" },

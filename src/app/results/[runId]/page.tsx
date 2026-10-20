@@ -1,4 +1,3 @@
-import { getAssignedQuestions } from "@/lib/games/assignmentService";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -14,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { StartRunButton } from "../../lobby/StartButton";
+import { getNextGameChallenge } from "@/lib/games/nextChallenge";
 
 export const dynamic = "force-dynamic";
 
@@ -73,15 +73,7 @@ export default async function ResultsPage({
     rank = betterRunsCount + 1;
   }
 
-  const assigned =
-    run.eventId && run.userId
-      ? await getAssignedQuestions(run.eventId, run.userId)
-      : [];
-  const assignedIndex = assigned.findIndex(
-    (item) => item.challengeId === run.challengeId,
-  );
-  const nextChallenge =
-    assignedIndex >= 0 ? assigned[assignedIndex + 1]?.challenge : undefined;
+  const nextChallenge = await getNextGameChallenge(run);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-cyan-500 selection:text-black">
@@ -363,10 +355,10 @@ export default async function ResultsPage({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          {isCompleted && nextChallenge && (
+          {isCompleted && nextChallenge && run.eventId && (
             <StartRunButton
               challengeId={nextChallenge.id}
-              gameId={run.eventId || undefined}
+              gameId={run.eventId}
               label="Next mission"
               className="px-6 py-2.5 rounded-lg btn-primary text-xs font-bold transition-colors flex items-center gap-2"
             />

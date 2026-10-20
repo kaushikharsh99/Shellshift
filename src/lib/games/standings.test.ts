@@ -2,6 +2,27 @@ import { describe, expect, it } from "vitest";
 import { rankIndividualRuns, rankTeamStandings } from "./standings";
 
 describe("individual standings", () => {
+  it("uses the faster run when a player has equal scores for one challenge", () => {
+    const completedAt = new Date("2026-10-12T10:00:00Z");
+    const ranked = rankIndividualRuns([
+      { userId: "a", userName: "Alice", challengeId: "one", finalScore: 900, durationMs: 60_000, completedAt },
+      { userId: "a", userName: "Alice", challengeId: "one", finalScore: 900, durationMs: 20_000, completedAt },
+      { userId: "b", userName: "Bob", challengeId: "one", finalScore: 900, durationMs: 30_000, completedAt },
+    ]);
+    expect(ranked.map((row) => row.userId)).toEqual(["a", "b"]);
+    expect(ranked[0].aggregateDurationMs).toBe(20_000);
+  });
+
+  it("uses the earlier completion when score and duration tie", () => {
+    const ranked = rankIndividualRuns([
+      { userId: "a", userName: "Alice", challengeId: "one", finalScore: 900, durationMs: 20_000, completedAt: new Date("2026-10-12T10:02:00Z") },
+      { userId: "a", userName: "Alice", challengeId: "one", finalScore: 900, durationMs: 20_000, completedAt: new Date("2026-10-12T10:00:00Z") },
+      { userId: "b", userName: "Bob", challengeId: "one", finalScore: 900, durationMs: 20_000, completedAt: new Date("2026-10-12T10:01:00Z") },
+    ]);
+    expect(ranked.map((row) => row.userId)).toEqual(["a", "b"]);
+    expect(ranked[0].lastCompletionMs).toBe(new Date("2026-10-12T10:00:00Z").getTime());
+  });
+
   it("keeps each user's best challenge score and applies deterministic tie breaks", () => {
     const ranked = rankIndividualRuns([
       { userId: "a", userName: "Alice", challengeId: "one", finalScore: 800, durationMs: 80_000, completedAt: new Date("2026-10-12T10:00:00Z") },
@@ -14,6 +35,21 @@ describe("individual standings", () => {
 });
 
 describe("team standings (average of all members)", () => {
+  it("uses the faster equal-score attempt for team tie breaks", () => {
+    const completedAt = new Date("2026-10-12T10:00:00Z");
+    const teams = [
+      { teamId: "a", teamName: "Alice team", members: [{ userId: "a", userName: "Alice" }] },
+      { teamId: "b", teamName: "Bob team", members: [{ userId: "b", userName: "Bob" }] },
+    ];
+    const ranked = rankTeamStandings(teams, [
+      { userId: "a", userName: "Alice", challengeId: "one", finalScore: 900, durationMs: 60_000, completedAt },
+      { userId: "a", userName: "Alice", challengeId: "one", finalScore: 900, durationMs: 20_000, completedAt },
+      { userId: "b", userName: "Bob", challengeId: "one", finalScore: 900, durationMs: 30_000, completedAt },
+    ]);
+    expect(ranked.map((row) => row.teamId)).toEqual(["a", "b"]);
+    expect(ranked[0].aggregateDurationMs).toBe(20_000);
+  });
+
   it("calculates team score as exact average of all member scores", () => {
     const teams = [
       {
