@@ -180,6 +180,8 @@ export function rankTeamStandings(
       joinedCount > 0
         ? Math.round((totalScoreSum / joinedCount) * 100) / 100
         : 0;
+    const averageDurationMs =
+      joinedCount > 0 ? Math.round(aggregateDurationMs / joinedCount) : 0;
 
     return {
       rank: 0,
@@ -189,7 +191,7 @@ export function rankTeamStandings(
       memberCount,
       members,
       challengesCompleted: teamChallengesCompleted,
-      aggregateDurationMs,
+      aggregateDurationMs: averageDurationMs,
       lastCompletionMs,
     };
   });

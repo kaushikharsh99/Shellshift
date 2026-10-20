@@ -51,6 +51,7 @@ describe("complete competition roster standings", () => {
       ],
     );
     expect(rows[0].totalScore).toBe(60);
+    expect(rows[0].aggregateDurationMs).toBe(50);
     expect(rows[0].memberCount).toBe(3);
     expect(rows[0].members).toHaveLength(3);
   });
