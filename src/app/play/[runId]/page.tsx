@@ -49,10 +49,8 @@ export default function PlayChallengePage() {
           totalEventScore: serverRun.totalEventScore ?? prev?.totalEventScore,
         };
       });
-      if (data.run.status === "COMPLETED") {
-        setIsCompleted(true);
-        setFinalDuration(data.run.durationMs);
-      }
+      setIsCompleted(data.run.status === "COMPLETED");
+      setFinalDuration(data.run.status === "COMPLETED" ? data.run.durationMs : null);
     } catch (err) {
       setErrorMsg("Network error: " + (err as Error).message);
     } finally {
@@ -62,6 +60,11 @@ export default function PlayChallengePage() {
 
   useEffect(() => {
     if (runId) {
+      setLoading(true);
+      setErrorMsg(null);
+      setRunData(null);
+      setIsCompleted(false);
+      setFinalDuration(null);
       fetchRunState();
     }
   }, [runId, fetchRunState]);
@@ -93,11 +96,15 @@ export default function PlayChallengePage() {
           speedBonus: bd?.speedBonus ?? prev.speedBonus,
           hintPenalty: bd?.hintPenalty ?? prev.hintPenalty,
           durationMs: durMs,
-          status: result.isCompleted ? "COMPLETED" : prev.status,
+          status: result.status ?? (result.isCompleted ? "COMPLETED" : prev.status),
           scoringBreakdown: bd ?? prev.scoringBreakdown,
           totalEventScore: updatedEventScore,
         };
       });
+    }
+
+    if (result?.isGameEnded || result?.isGamePaused) {
+      fetchRunState();
     }
 
     if (result?.isCompleted) {
@@ -110,7 +117,7 @@ export default function PlayChallengePage() {
   const handleGoToNextProblem = async () => {
     if (!runData?.nextChallenge) {
       const gameId = runData?.game?.id || runData?.gameId;
-      router.push(gameId ? `/games/${gameId}/standings` : "/games");
+      router.push(gameId ? `/games/${gameId}/lobby` : "/games");
       return;
     }
 
@@ -173,6 +180,7 @@ export default function PlayChallengePage() {
 
   return (
     <PlayShell
+      key={runId}
       runData={runData}
       isCompleted={isCompleted}
       finalDuration={finalDuration}

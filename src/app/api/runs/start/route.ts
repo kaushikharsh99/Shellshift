@@ -124,7 +124,7 @@ export async function POST(request: Request) {
           id: existingActiveRun.id,
           status: existingActiveRun.status,
           startedAt: existingActiveRun.startedAt,
-          deadlineAt: existingActiveRun.deadlineAt,
+          deadlineAt: currentEvent.endTime,
           currentWorkingDir: cwd,
           commandCount: existingActiveRun.commandCount,
           isExisting: true,
@@ -167,10 +167,7 @@ export async function POST(request: Request) {
     // Parse challenge scoring config
     const timeLimitSeconds = challenge.timeLimitSeconds || 1200;
     const startedAt = new Date();
-    let deadlineAt = new Date(startedAt.getTime() + timeLimitSeconds * 1000);
-    if (currentEvent.endTime && deadlineAt > currentEvent.endTime) {
-      deadlineAt = currentEvent.endTime;
-    }
+    const deadlineAt = currentEvent.endTime;
 
     let scoringConfig = {
       maxBaseScore: 1000,
@@ -198,6 +195,13 @@ export async function POST(request: Request) {
         };
       }
     } catch {}
+
+    // Per-challenge elapsed time remains internal; the event defines the scoring window.
+    if (currentEvent?.endTime) {
+      scoringConfig.timeLimitSeconds = Math.max(1, Math.ceil(
+        (new Date(currentEvent.endTime).getTime() - startedAt.getTime()) / 1000,
+      ));
+    }
 
     // Create new run with authoritative server start timestamp and deadline
     const newRun = await prisma.run.create({

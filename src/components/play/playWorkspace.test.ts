@@ -25,7 +25,7 @@ describe("terminal-first play workspace", () => {
       runData: { id: "run", gameId: "game", finalScore: 1200.84, commandCount: 4, durationMs: 118470, nextChallenge: { id: "next", title: "Hidden next question name" } },
     }));
     const text = html.replace(/<[^>]+>/g," ").replace(/\s+/g," ");
-    expect(text).toContain("Verified Time");
+    expect(text).not.toContain("Verified Time");
     expect(text).toContain("Final Score");
     expect(text).toContain("Commands Executed");
     expect(text).toContain("Next mission");

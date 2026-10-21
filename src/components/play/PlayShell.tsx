@@ -11,12 +11,11 @@ import { CompetitionEndedModal } from "@/components/play/CompetitionEndedModal";
 import {
   Terminal as TerminalIcon,
   KeyRound,
-  Wifi,
   AlertTriangle,
   User,
   PauseCircle,
-  Clock,
   Trophy,
+  ArrowRight,
 } from "lucide-react";
 
 interface PlayShellProps {
@@ -44,13 +43,12 @@ export function PlayShell({
   const challenge = runData.challenge;
   const game = runData.game;
   const isGamePaused = game?.status === "PAUSED";
-  const gameEndTimeMs = game?.endTime ? new Date(game.endTime).getTime() : null;
-  const runDeadlineMs = runData?.deadlineAt ? new Date(runData.deadlineAt).getTime() : null;
+  const [eventTimeExpired, setEventTimeExpired] = useState(false);
 
   const isGameEnded =
     game?.status === "ENDED" ||
     game?.status === "ARCHIVED" ||
-    runData?.status === "EXPIRED";
+    eventTimeExpired;
 
   useEffect(() => {
     if (isGameEnded && !isCompleted) {
@@ -58,31 +56,15 @@ export function PlayShell({
     }
   }, [isGameEnded, isCompleted]);
 
-  const effectiveDeadline =
-    runDeadlineMs && gameEndTimeMs
-      ? new Date(Math.min(runDeadlineMs, gameEndTimeMs))
-      : runDeadlineMs
-      ? new Date(runDeadlineMs)
-      : gameEndTimeMs
-      ? new Date(gameEndTimeMs)
-      : null;
-
   const playerName = runData.player?.name || runData.team?.name || "Admin Cipher Master";
   const clueCount = challenge.clues?.length || 0;
   const gameId = game?.id || runData.gameId;
-
-  // Format event pill info matching mockup e.g. "Live Sprint · 30m (11:00 AM)"
-  const eventName = game?.name || "Live Sprint";
-  const durationMins = game?.durationMinutes || (game?.timeLimitMinutes ? game.timeLimitMinutes : 30);
-  const startTimeDisplay = game?.startsAt
-    ? new Date(game.startsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-    : "11:00 AM";
 
   return (
     <div className="flex min-h-screen flex-col bg-[#07080d] font-mono text-[#fafafa] selection:bg-cyan-500 selection:text-black lg:h-screen">
       {/* 1. Top Status Command Bar */}
       <header className="flex shrink-0 items-center justify-between border-b border-[#1e2434] bg-[#0b0d14] px-3.5 py-2.5 select-none sm:px-4">
-        {/* Left: Terminal Prompt Box, SHELLSHIFT Logo, Event Badge */}
+        {/* SHELLSHIFT */}
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href={gameId ? `/games/${gameId}/lobby` : "/games"}
@@ -97,34 +79,15 @@ export function PlayShell({
               SHELL<span className="text-cyan-400">SHIFT</span>
             </span>
           </Link>
-
-          {/* Event Badge with Clock */}
-          <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-[#23293a] bg-[#121622] px-3 py-1 text-xs text-zinc-300 font-mono">
-            <span className="truncate">{eventName} · {durationMins}m</span>
-            <span className="flex items-center gap-1 text-zinc-400">
-              <Clock className="size-3 text-zinc-400 shrink-0" />
-              <span>({startTimeDisplay})</span>
-            </span>
-          </div>
         </div>
 
-        {/* Right: Connected, LiveTimer, Score, User Profile */}
+        {/* Event countdown, standings, score, and player */}
         <div className="flex shrink-0 items-center gap-3">
-          {/* Connected Indicator */}
-          <div className="hidden items-center gap-1.5 text-xs text-emerald-400 font-mono lg:flex">
-            <Wifi className="size-3.5 text-emerald-400 shrink-0" />
-            <span>Connected</span>
-          </div>
-
-          {/* Live Timer & Remaining */}
           <LiveTimer
-            startedAt={runData.startedAt}
-            completedAt={runData.completedAt}
-            durationMs={finalDuration}
-            deadlineAt={effectiveDeadline}
-            timeLimitSeconds={runData.timeLimitSeconds}
-            isExpired={runData.status === "EXPIRED" || isGameEnded}
+            deadlineAt={game?.endTime}
+            isExpired={isGameEnded}
             onTimeUp={() => {
+              setEventTimeExpired(true);
               setShowEndedModal(true);
               onRefreshRun?.();
             }}
@@ -237,6 +200,18 @@ export function PlayShell({
         isCompleted={isCompleted}
         difficulty={challenge.difficulty}
       />
+
+      <div className="flex shrink-0 justify-end px-3 pb-2 sm:px-4">
+        <button
+          type="button"
+          onClick={onNextChallenge}
+          disabled={startingNext || isGamePaused || isGameEnded}
+          className="inline-flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-300 transition hover:bg-cyan-950/60 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {startingNext ? "Opening…" : isCompleted ? "Next" : runData.nextChallenge ? "Skip to next" : "Back to challenges"}
+          <ArrowRight className="size-3.5" />
+        </button>
+      </div>
 
       {/* Mobile/Tablet Workspace Switcher */}
       <div className="flex items-center justify-around border-b border-[#1e2434] bg-[#0b0d14] px-3 py-1.5 select-none lg:hidden">

@@ -21,7 +21,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "operation-inversion",
     title: "Swapped Commands",
     description:
-      "Learn how a changed command can behave differently. Decode the clue and create directory /workspace/breach using the swapped command.",
+      "Decode the clue to discover the swapped commands, then create the directory /workspace/breach.",
     difficulty: "EASY",
     order: 1,
     estimatedDuration: "2-4 min",
@@ -60,14 +60,14 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
         "Welcome to ShellShift. Decode the transmission clue to discover swapped commands.",
     },
     objectiveConfig: {
-      description: "Create directory /workspace/breach",
+      description: "Decode the clue to discover the swapped commands, then create the directory /workspace/breach.",
       rules: [
         {
           id: "obj-1-breach-dir",
           points: 500,
           type: "dir_exists",
           path: "/workspace/breach",
-          description: "Directory /workspace/breach has been created",
+          description: "Create the directory /workspace/breach",
         },
       ],
     },
@@ -96,7 +96,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "pathfinder-basics",
     title: "Make a Project Folder",
     description:
-      "Practice creating a folder when two familiar commands have swapped jobs.",
+      "Create the directory /workspace/project. Decode the clue to find which command now creates folders.",
     difficulty: "EASY",
     order: 2,
     estimatedDuration: "2-4 min",
@@ -134,14 +134,14 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/readme.txt": "Mission: Create a directory named project.",
     },
     objectiveConfig: {
-      description: "Create directory /workspace/project",
+      description: "Create the directory /workspace/project. Decode the clue to find which command now creates folders.",
       rules: [
         {
           id: "obj-2-project-dir",
           points: 500,
           type: "dir_exists",
           path: "/workspace/project",
-          description: "Directory /workspace/project created",
+          description: "Create the directory /workspace/project",
         },
       ],
     },
@@ -172,7 +172,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "morse-mail",
     title: "Read the Morse Note",
     description:
-      "Decode the Morse code clue, inspect the note with the swapped command, and create the confirmation file.",
+      "Read /workspace/note.txt using the remapped read command, then create the confirmation file /workspace/read.txt.",
     difficulty: "EASY",
     order: 3,
     estimatedDuration: "2-4 min",
@@ -211,14 +211,14 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
         "WELCOME: You read the hidden note! Now run 'cat /workspace/read.txt' to complete.",
     },
     objectiveConfig: {
-      description: "Read /workspace/note.txt and create /workspace/read.txt",
+      description: "Read /workspace/note.txt using the remapped read command, then create the confirmation file /workspace/read.txt.",
       rules: [
         {
           id: "obj-3-read-file",
           points: 500,
           type: "file_exists",
           path: "/workspace/read.txt",
-          description: "Confirmation file /workspace/read.txt created",
+          description: "Ensure the file /workspace/read.txt exists",
         },
       ],
     },
@@ -249,7 +249,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "binary-breadcrumbs",
     title: "Follow the Binary Clue",
     description:
-      "Decode the binary clue and use the changed command to create the secret folder.",
+      "Decode the binary command-swap clue, then create the directory /workspace/secret.",
     difficulty: "EASY",
     order: 4,
     estimatedDuration: "2-4 min",
@@ -289,14 +289,14 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     },
     objectiveConfig: {
       description:
-        "Create directory /workspace/secret revealed by the binary clue",
+        "Decode the binary command-swap clue, then create the directory /workspace/secret.",
       rules: [
         {
           id: "obj-4-secret-dir",
           points: 500,
           type: "dir_exists",
           path: "/workspace/secret",
-          description: "Directory /workspace/secret created",
+          description: "Create the directory /workspace/secret",
         },
       ],
     },
@@ -327,7 +327,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "hex-in-plain-sight",
     title: "Remove the Temporary File",
     description:
-      "Decode the hex clue and remove one temporary file using the command mapping.",
+      "Delete /workspace/temp.txt and keep /workspace/keep.txt. Decode the hex clue to discover the correct removal command.",
     difficulty: "EASY",
     order: 5,
     estimatedDuration: "2-4 min",
@@ -367,21 +367,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     },
     objectiveConfig: {
       description:
-        "Delete /workspace/temp.txt while preserving /workspace/keep.txt",
+        "Delete /workspace/temp.txt and keep /workspace/keep.txt. Decode the hex clue to discover the correct removal command.",
       rules: [
         {
           id: "obj-5-temp-del",
           points: 300,
           type: "file_deleted",
           path: "/workspace/temp.txt",
-          description: "Temporary file /workspace/temp.txt removed",
+          description: "Delete /workspace/temp.txt",
         },
         {
           id: "obj-5-keep-exists",
           points: 200,
           type: "file_exists",
           path: "/workspace/keep.txt",
-          description: "File /workspace/keep.txt preserved",
+          description: "Ensure the file /workspace/keep.txt exists",
         },
       ],
     },
@@ -412,7 +412,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "directory-flip",
     title: "Copy the Flag File",
     description:
-      "Work out which command copies files, then make the requested copy of the flag.",
+      "Copy /workspace/flag.txt to /workspace/found.txt. The destination must contain HEX_SUCCESS from the flag file.",
     difficulty: "EASY",
     order: 6,
     estimatedDuration: "2-4 min",
@@ -451,7 +451,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/decoy.txt": "Not this file.",
     },
     objectiveConfig: {
-      description: "Deploy target file /workspace/found.txt",
+      description: "Copy /workspace/flag.txt to /workspace/found.txt. The destination must contain HEX_SUCCESS from the flag file.",
       rules: [
         {
           id: "obj-6-found",
@@ -459,7 +459,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
           type: "file_contains",
           path: "/workspace/found.txt",
           content: "HEX_SUCCESS",
-          description: "Target file /workspace/found.txt deployed with flag data",
+          description: "Make /workspace/found.txt contain HEX_SUCCESS",
         },
       ],
     },
@@ -490,7 +490,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "the-missing-file",
     title: "Copy Data to Backup",
     description:
-      "Copy the data file into the backup folder using the swapped command, keeping the original intact.",
+      "Copy /workspace/data.txt to /workspace/backup/data.txt. Keep /workspace/data.txt in its original location.",
     difficulty: "EASY",
     order: 7,
     estimatedDuration: "2-4 min",
@@ -530,21 +530,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     },
     objectiveConfig: {
       description:
-        "Copy /workspace/data.txt to /workspace/backup/data.txt while keeping original",
+        "Copy /workspace/data.txt to /workspace/backup/data.txt. Keep /workspace/data.txt in its original location.",
       rules: [
         {
           id: "obj-7-backup-file",
           points: 300,
           type: "file_exists",
           path: "/workspace/backup/data.txt",
-          description: "File copied to /workspace/backup/data.txt",
+          description: "Ensure the file /workspace/backup/data.txt exists",
         },
         {
           id: "obj-7-orig-file",
           points: 200,
           type: "file_exists",
           path: "/workspace/data.txt",
-          description: "Original /workspace/data.txt preserved",
+          description: "Ensure the file /workspace/data.txt exists",
         },
       ],
     },
@@ -574,7 +574,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "first-flag",
     title: "Prepare the Mission Folder",
     description:
-      "Create a mission folder and place a copy of the briefing inside it.",
+      "Create /workspace/mission, then copy /workspace/briefing.txt to /workspace/mission/briefing.txt.",
     difficulty: "EASY",
     order: 8,
     estimatedDuration: "2-4 min",
@@ -612,21 +612,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/briefing.txt": "MISSION DIRECTIVE: Level 8 complete.",
     },
     objectiveConfig: {
-      description: "Create /workspace/mission and copy briefing.txt into it",
+      description: "Create /workspace/mission, then copy /workspace/briefing.txt to /workspace/mission/briefing.txt.",
       rules: [
         {
           id: "obj-8-mission-dir",
           points: 250,
           type: "dir_exists",
           path: "/workspace/mission",
-          description: "Directory /workspace/mission created",
+          description: "Create the directory /workspace/mission",
         },
         {
           id: "obj-8-briefing-copy",
           points: 250,
           type: "file_exists",
           path: "/workspace/mission/briefing.txt",
-          description: "File /workspace/mission/briefing.txt deployed",
+          description: "Ensure the file /workspace/mission/briefing.txt exists",
         },
       ],
     },
@@ -657,7 +657,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "the-cryptic-agent",
     title: "Create the Agent Key",
     description:
-      "Decode the clue, remove the old note, and create the agent key with the changed commands.",
+      "Read /workspace/notes.txt, then create /workspace/agent.key. Use at least two terminal commands. The key file does not need any contents.",
     difficulty: "MEDIUM",
     order: 9,
     estimatedDuration: "4-7 min",
@@ -699,7 +699,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/notes.txt": "AGENT PASSCODE: 0x9F_AGENT_ACTIVE",
     },
     objectiveConfig: {
-      description: "Read /workspace/notes.txt and deploy /workspace/agent.key",
+      description: "Read /workspace/notes.txt, then create /workspace/agent.key. Use at least two terminal commands. The key file does not need any contents.",
       rules: [
         {
           id: "obj-9-agent-key",
@@ -707,14 +707,14 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
           type: "file_exists",
           path: "/workspace/agent.key",
           description:
-            "File /workspace/agent.key has been successfully deployed",
+            "Ensure the file /workspace/agent.key exists",
         },
         {
           id: "obj-9-cmd-investigated",
           points: 250,
           type: "min_commands",
           content: "2",
-          description: "Executed investigative operations in the terminal",
+          description: "Run at least 2 terminal commands",
         },
       ],
     },
@@ -745,7 +745,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "dead-letter",
     title: "Create Two Folders",
     description:
-      "Use the swapped command to create both named folders in the workspace.",
+      "Create both directories /workspace/alpha and /workspace/beta using the command mapping revealed by the clue.",
     difficulty: "MEDIUM",
     order: 10,
     estimatedDuration: "4-7 min",
@@ -783,21 +783,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/readme.txt": "Create two directories: alpha and beta.",
     },
     objectiveConfig: {
-      description: "Create /workspace/alpha and /workspace/beta",
+      description: "Create both directories /workspace/alpha and /workspace/beta using the command mapping revealed by the clue.",
       rules: [
         {
           id: "obj-10-alpha",
           points: 250,
           type: "dir_exists",
           path: "/workspace/alpha",
-          description: "Directory /workspace/alpha created",
+          description: "Create the directory /workspace/alpha",
         },
         {
           id: "obj-10-beta",
           points: 250,
           type: "dir_exists",
           path: "/workspace/beta",
-          description: "Directory /workspace/beta created",
+          description: "Create the directory /workspace/beta",
         },
       ],
     },
@@ -826,7 +826,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "log-diver",
     title: "Find the Hidden File",
     description:
-      "Search through nested folders for the secret file, then copy it to the workspace.",
+      "Find secret.txt inside the nested /workspace folders, then copy it to /workspace/found.txt. Use at least two terminal commands.",
     difficulty: "MEDIUM",
     order: 11,
     estimatedDuration: "4-7 min",
@@ -864,21 +864,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/sub1/sub2/sub3/secret.txt": "SECRET_TOKEN_ALPHA",
     },
     objectiveConfig: {
-      description: "Locate secret.txt and copy it to /workspace/found.txt",
+      description: "Find secret.txt inside the nested /workspace folders, then copy it to /workspace/found.txt. Use at least two terminal commands.",
       rules: [
         {
           id: "obj-11-found",
           points: 300,
           type: "file_exists",
           path: "/workspace/found.txt",
-          description: "File /workspace/found.txt deployed",
+          description: "Ensure the file /workspace/found.txt exists",
         },
         {
           id: "obj-11-cmd",
           points: 200,
           type: "min_commands",
           content: "2",
-          description: "Executed search and copy operations",
+          description: "Run at least 2 terminal commands",
         },
       ],
     },
@@ -909,7 +909,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "the-relocation-protocol",
     title: "Copy Report to Archive",
     description:
-      "Copy the report into the archive folder using the swapped command, keeping the original intact.",
+      "Copy /workspace/report.doc to /workspace/archive/report.doc and keep the original /workspace/report.doc.",
     difficulty: "MEDIUM",
     order: 12,
     estimatedDuration: "4-7 min",
@@ -960,21 +960,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     },
     objectiveConfig: {
       description:
-        "Copy /workspace/report.doc to /workspace/archive/report.doc",
+        "Copy /workspace/report.doc to /workspace/archive/report.doc and keep the original /workspace/report.doc.",
       rules: [
         {
           id: "obj-12-original",
           points: 250,
           type: "file_exists",
           path: "/workspace/report.doc",
-          description: "Original report remains in workspace",
+          description: "Ensure the file /workspace/report.doc exists",
         },
         {
           id: "obj-12-archived",
           points: 250,
           type: "file_exists",
           path: "/workspace/archive/report.doc",
-          description: "Report safely copied to /workspace/archive/report.doc",
+          description: "Ensure the file /workspace/archive/report.doc exists",
         },
       ],
     },
@@ -1005,7 +1005,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "needle-in-the-archive",
     title: "Check the Server Log",
     description:
-      "Find the error in the server log, then create the requested alert file.",
+      "Search /workspace/server.log for ERROR, then create /workspace/alert.txt. Use at least two terminal commands; the alert file can be empty.",
     difficulty: "MEDIUM",
     order: 13,
     estimatedDuration: "4-7 min",
@@ -1046,21 +1046,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
         "INFO boot ok\nINFO worker ready\nERROR critical failure 500\nINFO shutdown complete",
     },
     objectiveConfig: {
-      description: "Inspect error log and create /workspace/alert.txt",
+      description: "Search /workspace/server.log for ERROR, then create /workspace/alert.txt. Use at least two terminal commands; the alert file can be empty.",
       rules: [
         {
           id: "obj-13-alert",
           points: 300,
           type: "file_exists",
           path: "/workspace/alert.txt",
-          description: "Acknowledgment file /workspace/alert.txt created",
+          description: "Ensure the file /workspace/alert.txt exists",
         },
         {
           id: "obj-13-cmd",
           points: 200,
           type: "min_commands",
           content: "2",
-          description: "Executed grep and touch operations",
+          description: "Run at least 2 terminal commands",
         },
       ],
     },
@@ -1091,7 +1091,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "ghost-signal",
     title: "Clean Up the Workspace",
     description:
-      "Create the safe folder and remove the junk item by following the command clues.",
+      "Create the directory /workspace/safe and delete the file /workspace/junk.txt using the decoded command mappings.",
     difficulty: "MEDIUM",
     order: 14,
     estimatedDuration: "4-7 min",
@@ -1131,21 +1131,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/junk.txt": "Temporary file to delete.",
     },
     objectiveConfig: {
-      description: "Create /workspace/safe and delete /workspace/junk.txt",
+      description: "Create the directory /workspace/safe and delete the file /workspace/junk.txt using the decoded command mappings.",
       rules: [
         {
           id: "obj-14-safe-dir",
           points: 250,
           type: "dir_exists",
           path: "/workspace/safe",
-          description: "Directory /workspace/safe created",
+          description: "Create the directory /workspace/safe",
         },
         {
           id: "obj-14-junk-del",
           points: 250,
           type: "file_deleted",
           path: "/workspace/junk.txt",
-          description: "File /workspace/junk.txt removed",
+          description: "Delete /workspace/junk.txt",
         },
       ],
     },
@@ -1176,7 +1176,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "three-keys",
     title: "Organize Project Files",
     description:
-      "Move the code and style files into their matching project folders using the swapped command.",
+      "Move /workspace/code.js to /workspace/src/code.js and /workspace/style.css to /workspace/styles/style.css.",
     difficulty: "MEDIUM",
     order: 15,
     estimatedDuration: "4-7 min",
@@ -1218,21 +1218,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     },
     objectiveConfig: {
       description:
-        "Move code.js to src/code.js and style.css to styles/style.css",
+        "Move /workspace/code.js to /workspace/src/code.js and /workspace/style.css to /workspace/styles/style.css.",
       rules: [
         {
           id: "obj-15-code-moved",
           points: 250,
           type: "file_exists",
           path: "/workspace/src/code.js",
-          description: "File placed in /workspace/src/code.js",
+          description: "Ensure the file /workspace/src/code.js exists",
         },
         {
           id: "obj-15-style-moved",
           points: 250,
           type: "file_exists",
           path: "/workspace/styles/style.css",
-          description: "File placed in /workspace/styles/style.css",
+          description: "Ensure the file /workspace/styles/style.css exists",
         },
       ],
     },
@@ -1263,7 +1263,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "decoy-protocol",
     title: "Find the Real Target",
     description:
-      "Ignore the decoys, locate the correct target, and create a confirmation file.",
+      "Inspect /workspace/target_omega.txt rather than the decoy, then create /workspace/confirmation.txt. Use at least two commands; the confirmation can be empty.",
     difficulty: "MEDIUM",
     order: 16,
     estimatedDuration: "4-7 min",
@@ -1315,21 +1315,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/decoy.txt": "Decoy file.",
     },
     objectiveConfig: {
-      description: "Inspect target file and create /workspace/confirmation.txt",
+      description: "Inspect /workspace/target_omega.txt rather than the decoy, then create /workspace/confirmation.txt. Use at least two commands; the confirmation can be empty.",
       rules: [
         {
           id: "obj-16-conf",
           points: 300,
           type: "file_exists",
           path: "/workspace/confirmation.txt",
-          description: "Confirmation file /workspace/confirmation.txt created",
+          description: "Ensure the file /workspace/confirmation.txt exists",
         },
         {
           id: "obj-16-cmd",
           points: 200,
           type: "min_commands",
           content: "2",
-          description: "Executed file inspection and confirmation commands",
+          description: "Run at least 2 terminal commands",
         },
       ],
     },
@@ -1360,7 +1360,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "broken-chain",
     title: "Store Data in the Vault",
     description:
-      "Create the vault folder and copy the data file into it using the changed commands.",
+      "Create /workspace/vault, then copy /workspace/data.bin to /workspace/vault/data.bin.",
     difficulty: "MEDIUM",
     order: 17,
     estimatedDuration: "4-7 min",
@@ -1400,21 +1400,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/data.bin": "BINARY_PAYLOAD_DATA",
     },
     objectiveConfig: {
-      description: "Create /workspace/vault and place data.bin inside it",
+      description: "Create /workspace/vault, then copy /workspace/data.bin to /workspace/vault/data.bin.",
       rules: [
         {
           id: "obj-17-vault-dir",
           points: 250,
           type: "dir_exists",
           path: "/workspace/vault",
-          description: "Directory /workspace/vault created",
+          description: "Create the directory /workspace/vault",
         },
         {
           id: "obj-17-data-copied",
           points: 250,
           type: "file_exists",
           path: "/workspace/vault/data.bin",
-          description: "Data placed in /workspace/vault/data.bin",
+          description: "Ensure the file /workspace/vault/data.bin exists",
         },
       ],
     },
@@ -1445,7 +1445,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "deep-breach-babel",
     title: "Repair the Core Vault",
     description:
-      "Create the nested vault path, copy the key into it, and remove the temporary file.",
+      "Create /workspace/vault/core, copy /workspace/secret.key to /workspace/vault/core/secret.key, and delete /workspace/temp.tmp.",
     difficulty: "HARD",
     order: 18,
     estimatedDuration: "8-10 min",
@@ -1500,28 +1500,28 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     },
     objectiveConfig: {
       description:
-        "Establish /workspace/vault/core, copy secret.key into it, and purge temp.tmp",
+        "Create /workspace/vault/core, copy /workspace/secret.key to /workspace/vault/core/secret.key, and delete /workspace/temp.tmp.",
       rules: [
         {
           id: "obj-18-vault-dir",
           points: 200,
           type: "dir_exists",
           path: "/workspace/vault/core",
-          description: "Directory /workspace/vault/core created",
+          description: "Create the directory /workspace/vault/core",
         },
         {
           id: "obj-18-secret-key",
           points: 200,
           type: "file_exists",
           path: "/workspace/vault/core/secret.key",
-          description: "Key copied to /workspace/vault/core/secret.key",
+          description: "Ensure the file /workspace/vault/core/secret.key exists",
         },
         {
           id: "obj-18-temp-purged",
           points: 100,
           type: "file_deleted",
           path: "/workspace/temp.tmp",
-          description: "Temporary buffer /workspace/temp.tmp purged",
+          description: "Delete /workspace/temp.tmp",
         },
       ],
     },
@@ -1552,7 +1552,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "recursive-vault",
     title: "Secure the Key File",
     description:
-      "Create the secure folder and place a copy of the key file inside it.",
+      "Create /workspace/secure, then copy /workspace/key.dat to /workspace/secure/key.dat.",
     difficulty: "HARD",
     order: 19,
     estimatedDuration: "8-10 min",
@@ -1604,21 +1604,21 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
       "/workspace/key.dat": "SECURE_KEY_VAL_0019",
     },
     objectiveConfig: {
-      description: "Create /workspace/secure and copy key.dat into it",
+      description: "Create /workspace/secure, then copy /workspace/key.dat to /workspace/secure/key.dat.",
       rules: [
         {
           id: "obj-19-secure-dir",
           points: 250,
           type: "dir_exists",
           path: "/workspace/secure",
-          description: "Directory /workspace/secure created",
+          description: "Create the directory /workspace/secure",
         },
         {
           id: "obj-19-key-copied",
           points: 250,
           type: "file_exists",
           path: "/workspace/secure/key.dat",
-          description: "Key copied to /workspace/secure/key.dat",
+          description: "Ensure the file /workspace/secure/key.dat exists",
         },
       ],
     },
@@ -1649,7 +1649,7 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     slug: "final-convergence",
     title: "Prepare the Release",
     description:
-      "Build the production folder, copy in the release file, and remove the old cache.",
+      "Create /workspace/production, copy /workspace/artifact.dat to /workspace/production/artifact.dat, and delete /workspace/old_cache.tmp.",
     difficulty: "HARD",
     order: 20,
     estimatedDuration: "8-10 min",
@@ -1693,28 +1693,28 @@ export const SEED_CHALLENGES: SeedChallengeDef[] = [
     },
     objectiveConfig: {
       description:
-        "Create /workspace/production, place artifact.dat inside, and remove old_cache.tmp",
+        "Create /workspace/production, copy /workspace/artifact.dat to /workspace/production/artifact.dat, and delete /workspace/old_cache.tmp.",
       rules: [
         {
           id: "obj-20-prod-dir",
           points: 175,
           type: "dir_exists",
           path: "/workspace/production",
-          description: "Directory /workspace/production created",
+          description: "Create the directory /workspace/production",
         },
         {
           id: "obj-20-artifact",
           points: 175,
           type: "file_exists",
           path: "/workspace/production/artifact.dat",
-          description: "Artifact placed in /workspace/production/artifact.dat",
+          description: "Ensure the file /workspace/production/artifact.dat exists",
         },
         {
           id: "obj-20-cache-del",
           points: 150,
           type: "file_deleted",
           path: "/workspace/old_cache.tmp",
-          description: "Old cache /workspace/old_cache.tmp purged",
+          description: "Delete /workspace/old_cache.tmp",
         },
       ],
     },

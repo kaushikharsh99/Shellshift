@@ -8,7 +8,7 @@ export function evaluateRunAccess(
   if (viewer.role !== "ADMIN" && run.userId !== viewer.id) return "RUN_FORBIDDEN";
   if (run.event?.status === "PAUSED") return "GAME_PAUSED";
   if (run.event?.status === "ENDED" || run.event?.status === "ARCHIVED" || (run.event?.endTime && now >= run.event.endTime)) return "GAME_ENDED";
-  if (run.deadlineAt && now >= run.deadlineAt) return "RUN_EXPIRED";
+  if (!run.event && run.deadlineAt && now >= run.deadlineAt) return "RUN_EXPIRED";
   return "OK";
 }
 

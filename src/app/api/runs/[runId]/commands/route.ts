@@ -156,9 +156,7 @@ export async function POST(
 
     const now = new Date();
     const timeLimitSeconds = run.challenge.timeLimitSeconds || 1200;
-    const deadline = run.deadlineAt
-      ? new Date(run.deadlineAt)
-      : new Date(run.startedAt.getTime() + timeLimitSeconds * 1000);
+
 
     // Parse scoring config
     let scoringConfig = {
@@ -187,71 +185,11 @@ export async function POST(
       }
     } catch {}
 
-    // Check Authoritative Deadline Expiration
-    if (now.getTime() > deadline.getTime()) {
-      if (run.status === "IN_PROGRESS") {
-        await prisma.run.updateMany({
-          where: { id: run.id, status: "IN_PROGRESS" },
-          data: { status: "EXPIRED" },
-        });
-
-        // Compute and store partial score if configured
-        if (scoringConfig.partialCreditOnExpiry) {
-          const completions = await prisma.objectiveCompletion.findMany({
-            where: { runId: run.id },
-          });
-          const hintUsages = await prisma.hintUsage.findMany({
-            where: { runId: run.id },
-            include: { hint: true },
-          });
-          const verifiedIds = completions.map((c) => c.objectiveId);
-          const hintPenalties = hintUsages.map((u) => u.pointPenalty || u.hint.pointPenalty || 25);
-
-          let objConfig: ObjectiveConfig = { description: "", rules: [] };
-          try {
-            objConfig = JSON.parse(run.challenge.objectiveConfig);
-          } catch {}
-
-          const objectives = (objConfig.rules || []).map((r, idx) => ({
-            id: r.id || `rule-${idx}`,
-            description: r.description,
-            points: r.points || 0,
-          }));
-
-          const partialBreakdown = calculateRunScore({
-            status: "EXPIRED",
-            startedAt: run.startedAt,
-            currentTimestamp: deadline,
-            verifiedObjectiveIds: verifiedIds,
-            revealedHintPenalties: hintPenalties,
-            config: scoringConfig,
-            objectives,
-          });
-
-          await prisma.run.update({
-            where: { id: run.id },
-            data: {
-              objectivePoints: partialBreakdown.objectivePoints,
-              completionBonus: 0,
-              speedBonus: 0,
-              hintPenalty: partialBreakdown.hintPenalty,
-              baseScore: partialBreakdown.baseScore,
-              finalScore: partialBreakdown.finalScore,
-              scoringBreakdown: JSON.stringify(partialBreakdown),
-            },
-          });
-        }
-      }
-
-      return NextResponse.json(
-        {
-          error: "Time limit expired. Subsequent commands are rejected.",
-          isCompleted: false,
-          isExpired: true,
-          status: "EXPIRED",
-        },
-        { status: 400 }
-      );
+    // Per-challenge elapsed time remains internal; the event defines the scoring window.
+    if (run.event?.endTime) {
+      scoringConfig.timeLimitSeconds = Math.max(1, Math.ceil(
+        (new Date(run.event.endTime).getTime() - run.startedAt.getTime()) / 1000,
+      ));
     }
 
     // Load VFS state & challenge mapping

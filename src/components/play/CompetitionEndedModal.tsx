@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { Trophy, Clock, Terminal as TerminalIcon, CheckCircle2, ArrowRight, Eye, Flag, AlertTriangle } from "lucide-react";
+import { Trophy, Terminal as TerminalIcon, CheckCircle2, ArrowRight, Eye, Flag } from "lucide-react";
 
 interface CompetitionEndedModalProps {
   runData: any;
@@ -22,12 +21,13 @@ export function CompetitionEndedModal({
   const completedObjectives = evaluation?.completedRules ?? (runData?.status === "COMPLETED" ? 1 : 0);
   const totalObjectives = evaluation?.totalRules ?? 1;
 
-  const standingsUrl = gameId ? `/games/${gameId}/standings` : "/games";
-  const lobbyUrl = gameId ? `/games/${gameId}/lobby` : "/games";
+  const eventId = gameId || runData?.game?.id || runData?.gameId;
+  const standingsUrl = eventId ? `/games/${eventId}/standings` : "/games";
+  const lobbyUrl = eventId ? `/games/${eventId}/lobby` : "/games";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 font-mono select-none animate-in fade-in duration-200">
-      <div className="w-full max-w-md space-y-5 rounded-2xl border border-rose-500/40 bg-[#0d101a] p-6 text-center shadow-2xl relative overflow-hidden sm:p-7">
+      <div role="dialog" aria-modal="true" aria-labelledby="event-ended-title" className="w-full max-w-md space-y-5 rounded-2xl border border-rose-500/40 bg-[#0d101a] p-6 text-center shadow-2xl relative overflow-hidden sm:p-7">
         {/* Top Glow Accent */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-rose-500 to-transparent" />
 
@@ -42,7 +42,7 @@ export function CompetitionEndedModal({
             <Flag className="size-3 text-rose-400" />
             <span>Competition Concluded</span>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-white">Event Has Ended</h2>
+          <h2 id="event-ended-title" className="text-xl font-bold tracking-tight text-white">Event Has Ended</h2>
           <p className="text-xs text-zinc-400 leading-relaxed">
             The event timer has expired and submissions are locked. Final scores and player rankings are now verified and published.
           </p>
@@ -81,14 +81,14 @@ export function CompetitionEndedModal({
         {/* Action Buttons */}
         <div className="space-y-2.5 pt-1">
           {/* Primary CTA: Event Leaderboard */}
-          <Link
+          <a
             href={standingsUrl}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-3 text-xs sm:text-sm font-bold text-black shadow-[0_0_20px_rgba(245,158,11,0.25)] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
           >
             <Trophy className="size-4 shrink-0 text-black" />
             <span>Go to Event Leaderboard</span>
             <ArrowRight className="size-4 shrink-0" />
-          </Link>
+          </a>
 
           <div className="flex items-center gap-2">
             {onClose && (
@@ -102,12 +102,12 @@ export function CompetitionEndedModal({
               </button>
             )}
 
-            <Link
+            <a
               href={lobbyUrl}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#23293a] bg-[#121622] px-3.5 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:border-[#38435d] transition-colors"
             >
               <span>Lobby</span>
-            </Link>
+            </a>
           </div>
         </div>
       </div>

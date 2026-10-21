@@ -88,9 +88,8 @@ export async function GET(
 
   const now = new Date();
   const timeLimitSeconds = run.challenge.timeLimitSeconds || 1200;
-  const deadline = run.deadlineAt
-    ? new Date(run.deadlineAt)
-    : new Date(run.startedAt.getTime() + timeLimitSeconds * 1000);
+  // The event schedule is authoritative, including for runs created before this change.
+  const deadline = run.event ? run.event.endTime : run.deadlineAt;
 
   let currentStatus = run.status;
 
@@ -115,10 +114,10 @@ export async function GET(
     });
   }
 
-  // Authoritative Expiration check on retrieval (challenge deadline OR event ended)
+  // Challenge elapsed time is recorded, but only the event can end an event run.
   if (
     currentStatus === "IN_PROGRESS" &&
-    (now.getTime() > deadline.getTime() || isEventEnded)
+    ((!run.event && deadline && now.getTime() >= deadline.getTime()) || isEventEnded)
   ) {
     currentStatus = "EXPIRED";
     await prisma.run.updateMany({
@@ -193,6 +192,13 @@ export async function GET(
         };
       }
     } catch {}
+
+    // Per-challenge elapsed time remains internal; the event defines the scoring window.
+    if (run.event?.endTime) {
+      scoringConfig.timeLimitSeconds = Math.max(1, Math.ceil(
+        (new Date(run.event.endTime).getTime() - run.startedAt.getTime()) / 1000,
+      ));
+    }
 
     const availableObjectives = (objectiveConfig.rules || []).map((r, idx) => ({
       id: r.id || `rule-${idx}`,

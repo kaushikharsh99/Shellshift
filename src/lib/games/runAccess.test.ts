@@ -9,10 +9,10 @@ describe("individual run access", () => {
     expect(evaluateRunAccess(run, { id: "admin", role: "ADMIN" }, new Date("2026-10-12T10:00:00Z"))).toBe("OK");
   });
 
-  it("reports paused, ended, and expired states", () => {
+  it("uses event state and ignores earlier challenge deadlines", () => {
     const base = { userId: "owner", deadlineAt: new Date("2026-10-12T11:00:00Z"), event: { status: "PUBLISHED", endTime: new Date("2026-10-12T12:00:00Z") } };
     expect(evaluateRunAccess({ ...base, event: { ...base.event, status: "PAUSED" } }, { id: "owner", role: "USER" }, new Date("2026-10-12T10:00:00Z"))).toBe("GAME_PAUSED");
     expect(evaluateRunAccess({ ...base, event: { ...base.event, status: "ENDED" } }, { id: "owner", role: "USER" }, new Date("2026-10-12T10:00:00Z"))).toBe("GAME_ENDED");
-    expect(evaluateRunAccess(base, { id: "owner", role: "USER" }, new Date("2026-10-12T11:00:00Z"))).toBe("RUN_EXPIRED");
+    expect(evaluateRunAccess(base, { id: "owner", role: "USER" }, new Date("2026-10-12T11:00:00Z"))).toBe("OK");
   });
 });

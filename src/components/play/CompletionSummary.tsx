@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Trophy,
   ArrowRight,
-  Clock,
   Terminal as TerminalIcon,
   CheckCircle2,
 } from "lucide-react";
@@ -20,16 +19,9 @@ interface CompletionSummaryProps {
 
 export function CompletionSummary({
   runData,
-  finalDuration,
   onNextChallenge,
   startingNext = false,
 }: CompletionSummaryProps) {
-  const durationSec = finalDuration
-    ? (finalDuration / 1000).toFixed(2)
-    : runData.durationMs
-      ? (runData.durationMs / 1000).toFixed(2)
-      : "--";
-
   const nextChallenge = runData.nextChallenge;
   const gameId = runData.game?.id || runData.gameId;
 
@@ -55,14 +47,6 @@ export function CompletionSummary({
         </div>
 
         <div className="space-y-3 rounded-xl border border-zinc-800 bg-[#07080b] p-4 text-left font-mono">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
-            <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-              <Clock className="size-3.5 text-cyan-400" /> Verified Time
-            </span>
-            <span className="text-lg font-bold tabular-nums text-emerald-400">
-              {durationSec}s
-            </span>
-          </div>
 
           <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
             <span className="flex items-center gap-1.5 text-xs text-zinc-400">

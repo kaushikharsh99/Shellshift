@@ -74,7 +74,7 @@ describe("hint access during game state changes", () => {
     expect(mocks.upsertUsage).toHaveBeenCalledOnce();
   });
 
-  it("expires a run whose challenge deadline has passed", async () => {
+  it("allows hints after an old challenge deadline while the event is live", async () => {
     mocks.findRun.mockResolvedValueOnce({
       id: "run", userId: "player", challengeId: "challenge", status: "IN_PROGRESS",
       deadlineAt: new Date(Date.now() - 1_000),
@@ -83,8 +83,8 @@ describe("hint access during game state changes", () => {
     const response = await POST(new Request("http://localhost/api/runs/run/hints/hint", { method: "POST" }), {
       params: Promise.resolve({ runId: "run", hintId: "hint" }),
     });
-    expect(response.status).toBe(400);
-    expect(mocks.expireRun).toHaveBeenCalledOnce();
-    expect(mocks.upsertUsage).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(mocks.expireRun).not.toHaveBeenCalled();
+    expect(mocks.upsertUsage).toHaveBeenCalledOnce();
   });
 });
